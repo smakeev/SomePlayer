@@ -73,6 +73,7 @@
 		B6137505229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B6137506229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B6137507229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
+		B61FBB1B22A1B2D800B7D839 /* SomePlayerActionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,6 +119,7 @@
 		66C8351E200286B400E953C7 /* Reader+Converter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reader+Converter.swift"; sourceTree = "<group>"; };
 		B61374FE229F124F00694CF2 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		B6137504229F133E00694CF2 /* TimePitchStreamer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimePitchStreamer.swift; sourceTree = "<group>"; };
+		B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomePlayerActionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +153,7 @@
 			children = (
 				665DDECD20C7AD1F00CBC330 /* ProgressSlider.swift */,
 				665DDECF20C7ADEC00CBC330 /* TimeInterval+MMSS.swift */,
+				B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -463,6 +466,7 @@
 				66C835142001BEFA00E953C7 /* Reading.swift in Sources */,
 				66A1397B20013FAA0076B0E5 /* DownloadingDelegate.swift in Sources */,
 				66A139832001546D0076B0E5 /* DownloadingState.swift in Sources */,
+				B61FBB1B22A1B2D800B7D839 /* SomePlayerActionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -680,7 +684,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = QZ222K9SPY;
+				DEVELOPMENT_TEAM = 6WLV67D2QG;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
@@ -702,7 +706,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = QZ222K9SPY;
+				DEVELOPMENT_TEAM = 6WLV67D2QG;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";

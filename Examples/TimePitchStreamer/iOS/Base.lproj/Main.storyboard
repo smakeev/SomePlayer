@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
     <device id="retina4_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14460.20"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -19,7 +19,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="7uo-NU-YtZ">
-                                <rect key="frame" x="32" y="36" width="311" height="566.5"/>
+                                <rect key="frame" x="32" y="36" width="311" height="631.5"/>
                                 <subviews>
                                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="3bP-IE-Np2">
                                         <rect key="frame" x="0.0" y="0.0" width="311" height="162.5"/>
@@ -98,7 +98,7 @@
                                         </subviews>
                                     </stackView>
                                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="Ghd-bc-Z2D">
-                                        <rect key="frame" x="0.0" y="357" width="311" height="209.5"/>
+                                        <rect key="frame" x="0.0" y="357" width="311" height="274.5"/>
                                         <subviews>
                                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Playback" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="z0G-Lh-GC5">
                                                 <rect key="frame" x="0.0" y="0.0" width="311" height="38.5"/>
@@ -140,17 +140,59 @@
                                                     <action selector="progressSliderValueChanged:" destination="BYZ-38-t0r" eventType="valueChanged" id="J4C-kr-8jz"/>
                                                 </connections>
                                             </slider>
-                                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="Rql-KZ-673">
-                                                <rect key="frame" x="0.0" y="121.5" width="311" height="88"/>
+                                            <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" alignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="Rql-KZ-673">
+                                                <rect key="frame" x="0.0" y="121.5" width="311" height="153"/>
                                                 <subviews>
+                                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="xkF-hw-I0H" customClass="SomePlayerActionView" customModule="AudioStreamer">
+                                                        <rect key="frame" x="0.0" y="24" width="103.5" height="129"/>
+                                                        <subviews>
+                                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Smart Speed" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XL1-Yj-UAd">
+                                                                <rect key="frame" x="8" y="44" width="87.5" height="41"/>
+                                                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                                <nil key="textColor"/>
+                                                                <nil key="highlightedColor"/>
+                                                            </label>
+                                                        </subviews>
+                                                        <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                        <constraints>
+                                                            <constraint firstItem="XL1-Yj-UAd" firstAttribute="centerY" secondItem="xkF-hw-I0H" secondAttribute="centerY" id="Yhz-vH-VVZ"/>
+                                                            <constraint firstAttribute="width" secondItem="xkF-hw-I0H" secondAttribute="height" multiplier="103:128" id="avQ-Br-mah"/>
+                                                            <constraint firstItem="XL1-Yj-UAd" firstAttribute="centerX" secondItem="xkF-hw-I0H" secondAttribute="centerX" id="g6h-GN-QAW"/>
+                                                            <constraint firstItem="XL1-Yj-UAd" firstAttribute="leading" secondItem="xkF-hw-I0H" secondAttribute="leading" constant="8" id="gQN-TE-3eG"/>
+                                                            <constraint firstAttribute="trailing" secondItem="XL1-Yj-UAd" secondAttribute="trailing" constant="8" id="lex-Bi-LNF"/>
+                                                        </constraints>
+                                                    </view>
                                                     <button opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6Rt-X4-cTN">
-                                                        <rect key="frame" x="0.0" y="24" width="311" height="64"/>
+                                                        <rect key="frame" x="103.5" y="56.5" width="104" height="64"/>
                                                         <state key="normal" image="play"/>
                                                         <connections>
                                                             <action selector="togglePlayback:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Kfs-ic-Ezd"/>
                                                         </connections>
                                                     </button>
+                                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="AcD-KW-0dL" customClass="SomePlayerActionView" customModule="AudioStreamer">
+                                                        <rect key="frame" x="207.5" y="24" width="103.5" height="129"/>
+                                                        <subviews>
+                                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Speed Up Silence" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="FEz-jl-xC8">
+                                                                <rect key="frame" x="8" y="44" width="87.5" height="41"/>
+                                                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                                <nil key="textColor"/>
+                                                                <nil key="highlightedColor"/>
+                                                            </label>
+                                                        </subviews>
+                                                        <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                        <constraints>
+                                                            <constraint firstItem="FEz-jl-xC8" firstAttribute="centerX" secondItem="AcD-KW-0dL" secondAttribute="centerX" id="8YA-kQ-hsZ"/>
+                                                            <constraint firstItem="FEz-jl-xC8" firstAttribute="centerY" secondItem="AcD-KW-0dL" secondAttribute="centerY" id="b2Q-kj-tfH"/>
+                                                            <constraint firstItem="FEz-jl-xC8" firstAttribute="leading" secondItem="AcD-KW-0dL" secondAttribute="leading" constant="8" id="kmK-6Y-yMU"/>
+                                                            <constraint firstAttribute="width" secondItem="AcD-KW-0dL" secondAttribute="height" multiplier="103:128" id="mA3-kE-U6b"/>
+                                                            <constraint firstAttribute="trailing" secondItem="FEz-jl-xC8" secondAttribute="trailing" constant="8" id="xvW-Wm-1jH"/>
+                                                        </constraints>
+                                                    </view>
                                                 </subviews>
+                                                <constraints>
+                                                    <constraint firstItem="AcD-KW-0dL" firstAttribute="width" secondItem="6Rt-X4-cTN" secondAttribute="width" id="uGC-cl-K1H"/>
+                                                    <constraint firstItem="xkF-hw-I0H" firstAttribute="width" secondItem="6Rt-X4-cTN" secondAttribute="width" id="ub0-Yr-uBL"/>
+                                                </constraints>
                                                 <edgeInsets key="layoutMargins" top="24" left="0.0" bottom="0.0" right="0.0"/>
                                             </stackView>
                                         </subviews>
@@ -176,6 +218,8 @@
                         <outlet property="progressSlider" destination="wbu-hk-HMy" id="hlB-wq-TzU"/>
                         <outlet property="rateLabel" destination="8Wl-Uu-Tp5" id="u5f-R7-bh6"/>
                         <outlet property="rateSlider" destination="WWs-0P-IbT" id="RQh-60-diN"/>
+                        <outlet property="smartSpeedBtn" destination="xkF-hw-I0H" id="7Ha-OV-Qds"/>
+                        <outlet property="speedUpBtn" destination="AcD-KW-0dL" id="lLC-9Z-g4n"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

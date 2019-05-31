@@ -15,6 +15,9 @@ class ViewController: UIViewController {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "ViewController")
     
     // UI props
+	@IBOutlet weak var smartSpeedBtn: SomePlayerActionView!
+	@IBOutlet weak var speedUpBtn: SomePlayerActionView!
+	
     @IBOutlet weak var currentTimeLabel: UILabel!
     @IBOutlet weak var durationTimeLabel: UILabel!
     @IBOutlet weak var rateLabel: UILabel!
@@ -23,7 +26,7 @@ class ViewController: UIViewController {
     @IBOutlet weak var pitchSlider: UISlider!
     @IBOutlet weak var playButton: UIButton!
     @IBOutlet weak var progressSlider: ProgressSlider!
-    
+	
     // Streamer props
     lazy var player: SomePlayer = {
         let player = SomePlayer()
@@ -48,11 +51,33 @@ class ViewController: UIViewController {
         
         /// Download
         //let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
-        //let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
+        let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
         //let url = URL(string: "https://play.podtrac.com/npr-510289/edge1.pod.npr.org/anon.npr-podcasts/podcast/npr/pmoney/2019/05/20190529_pmoney_pmpod916-3c38222a-1786-4732-8199-2055f4ecdbe8.mp3?awCollectionId=510289&awEpisodeId=728001911&orgId=1&d=1395&p=510289&story=728001911&t=podcast&e=728001911&size=22279265&ft=pod&f=510289")!
 
-        let url = URL(string: "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8")!
+      //  let url = URL(string: "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8")!
         player.url = url
+		
+        smartSpeedBtn.action = { [unowned self] btn in
+			if self.player.silenceHandlingType == .smart {
+				self.player.silenceHandlingType = .none
+				btn.backgroundColor = .lightGray
+				return
+			}
+			self.player.silenceHandlingType = .smart
+			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
+			self.speedUpBtn.backgroundColor = .lightGray
+		}
+		
+		speedUpBtn.action = { btn in
+			if self.player.silenceHandlingType == .speedUp {
+				self.player.silenceHandlingType = .none
+				btn.backgroundColor = .lightGray
+				return
+			}
+			self.player.silenceHandlingType = .speedUp
+			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
+			self.smartSpeedBtn.backgroundColor = .lightGray
+		}
     }
     
     // MARK: - Setting Up The Engine
@@ -145,7 +170,7 @@ class ViewController: UIViewController {
         var rate = rateSlider.value
         let newStep = roundf(rate / step)
         rate = newStep * step
-        player.rate = rate
+        player.baseRate = rate
         rateSlider.value = rate
         rateLabel.text = String(format: "%.2fx", rate)
     }
@@ -154,7 +179,7 @@ class ViewController: UIViewController {
         os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
         
         let rate: Float = 1
-        player.rate = rate
+        player.baseRate = rate
         rateLabel.text = String(format: "%.2fx", rate)
         rateSlider.value = rate
     }

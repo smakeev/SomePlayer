@@ -5,7 +5,7 @@
 //  Created by Haris Ali on 1/26/19.
 //  Copyright © 2019 Ausome Apps LLC. All rights reserved.
 //
-
+//mac
 import AudioStreamer
 import AVFoundation
 import Cocoa
@@ -18,7 +18,6 @@ class ViewController: NSViewController {
     }
     
     // MARK: - Properties
-    
     @IBOutlet weak var currentTimeLabel: NSTextField!
     @IBOutlet weak var durationTimeLabel: NSTextField!
     @IBOutlet weak var playbackControlsStackView: NSStackView!
