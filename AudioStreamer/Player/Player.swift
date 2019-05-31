@@ -104,12 +104,12 @@ open class SomePlayer: NSObject {
         } else {
             self.rate = defaultPLaybackRate + (amplitudes.max()! - amplitudes.last!) * 0.02
         }
-
     }
 
     public fileprivate(set) var averagePowerForChannel0: Float? = nil {
         didSet {
             //print("CH0 \(String(describing: averagePowerForChannel0))")
+            print(averagePowerForChannel0)
             handleSilence()
         }
     }

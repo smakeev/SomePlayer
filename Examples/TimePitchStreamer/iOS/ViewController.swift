@@ -48,7 +48,10 @@ class ViewController: UIViewController {
         
         /// Download
         //let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
-        let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
+        //let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
+        //let url = URL(string: "https://play.podtrac.com/npr-510289/edge1.pod.npr.org/anon.npr-podcasts/podcast/npr/pmoney/2019/05/20190529_pmoney_pmpod916-3c38222a-1786-4732-8199-2055f4ecdbe8.mp3?awCollectionId=510289&awEpisodeId=728001911&orgId=1&d=1395&p=510289&story=728001911&t=podcast&e=728001911&size=22279265&ft=pod&f=510289")!
+
+        let url = URL(string: "http://qthttp.apple.com.edgesuite.net/1010qwoeiuryfg/sl.m3u8")!
         player.url = url
     }
     

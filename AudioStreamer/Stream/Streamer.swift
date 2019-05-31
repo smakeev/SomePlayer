@@ -285,9 +285,6 @@ open class Streamer: Streaming {
         }
     }
 
-
-
-
     fileprivate let kMinDb: Float = -35.0
 
     fileprivate func scaledPower(power: Float) -> Float {
