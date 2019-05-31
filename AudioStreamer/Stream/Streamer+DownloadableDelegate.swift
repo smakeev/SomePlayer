@@ -10,7 +10,13 @@ import Foundation
 import os.log
 
 extension Streamer: DownloadingDelegate {
-    
+	
+	public func download(_ download: Downloading, hasRangeHeader: Bool, totalSize: Int64) {
+		DispatchQueue.main.async { [unowned self] in
+			self.delegate?.streamer(self, hasRangeHeader: hasRangeHeader, totalSize: totalSize)
+		}
+	}
+	
     public func download(_ download: Downloading, completedWithError error: Error?) {
         os_log("%@ - %d [error: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: error?.localizedDescription))
         

@@ -14,6 +14,7 @@ public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, changedState state: StreamingState)
 	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval)
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
+	func player(_ player: SomePlayer, savedSeconds: TimeInterval)
 }
 
 
@@ -27,12 +28,21 @@ open class SomePlayer: NSObject {
 	
 	public var silenceHandlingType: SilenceHandlingType = .none {
 		didSet {
-			if silenceHandlingType == .none {
-				self.rate = self.baseRate
-			}
+			amplitudes = [Float]()
+			self.rate = self.baseRate
 		}
 	}
 	
+	public internal(set) var fileDownloaded: Bool  = false
+	public internal(set) var rangeHeader:    Bool  = false
+	public internal(set) var totalSize:      Int64 = 0
+	public internal(set) var hasBytes:       Int64 = 0
+	
+	public var sampleRate: Double? {
+		get {
+			return streamer.parser?.dataFormat?.sampleRate
+		}
+	}
 	
 	weak public var delegate: SomePlayerDelegate? = nil
 	
@@ -65,6 +75,8 @@ open class SomePlayer: NSObject {
 	
 	public func seek(to time: TimeInterval) {
 		do{
+			amplitudes = [Float]()
+			self.rate = self.baseRate
 			try streamer.seek(to: time)
 		}
 		catch {
@@ -92,14 +104,33 @@ open class SomePlayer: NSObject {
 			return streamer.rate
 		}
 		set {
-			print("rate: \(newValue))")
 			streamer.rate = newValue
+			for observer in rateObservers.values {
+				observer(newValue)
+			}
 		}
+	}
+	
+	fileprivate var rateObservers: [String : (Float)->Void] = [String : (Float)->Void]()
+	public func addRateObserver(withId id: String, observer: @escaping (Float)->Void) {
+		rateObservers[id] = observer
+	}
+	
+	public func removeRateObserver(withId id: String) {
+		rateObservers[id] = nil
 	}
 	
 	private var amplitudes: [Float] = [Float]()
 	
 	private func handleSilence() {
+		
+		func informForsavedTime() {
+			if let validSampleRate = self.sampleRate {
+			 	let interval:Double = Double(1 / (validSampleRate / Double(streamer.readBufferSize)))
+				let savedSeconds: Double = Double(interval - (interval / Double(self.rate)))
+				self.delegate?.player(self, savedSeconds: savedSeconds)
+			}
+		}
 		
 		if silenceHandlingType == .none {
 			return
@@ -111,6 +142,7 @@ open class SomePlayer: NSObject {
 			if let average = averagePowerForChannel0 {
 				if average < decibelThreshold {
 					self.rate = 3
+					informForsavedTime()
 				} else {
 					self.rate = Float(baseRate)
 				}
@@ -121,11 +153,13 @@ open class SomePlayer: NSObject {
 		if silenceHandlingType == .smart {
 			guard let average = self.averagePowerForChannel0 else { return }
 			amplitudes.append(average + 120)
+			guard amplitudes.count > 10 else { return }
 			if self.amplitudes.last! > 50 {
 				self.rate = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.01
 			} else {
 				self.rate = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.02
 			}
+			informForsavedTime()
 			return
 		}
 	}
@@ -163,6 +197,10 @@ extension SomePlayer: StreamingDelegate {
 		}
 	}
 	
+	public func streamer(_ streamer: Streaming, hasRangeHeader: Bool, totalSize: Int64) {
+		self.totalSize = totalSize
+		self.rangeHeader = hasRangeHeader
+	}
 	
 	public func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL) {
 		delegate?.player(self, failedDownloadWithError: error, forURL: url)
@@ -170,9 +208,14 @@ extension SomePlayer: StreamingDelegate {
 	
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
 		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
+		if progress == 1.0 {
+			fileDownloaded = true
+		}
 	}
 	
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
+		amplitudes = [Float]()
+		self.rate = self.baseRate
 		delegate?.player(self, changedState: state)
 		let mainMixer = streamer.engine.mainMixerNode
 		if state == .playing {

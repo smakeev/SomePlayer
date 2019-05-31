@@ -60,5 +60,8 @@ extension ViewController: SomePlayerDelegate {
         progressSlider.minimumValue = 0.0
         progressSlider.maximumValue = Float(duration)
     }
-    
+	
+    func player(_ player: SomePlayer, savedSeconds: TimeInterval) {
+    	self.savedSeconds += savedSeconds
+	}
 }

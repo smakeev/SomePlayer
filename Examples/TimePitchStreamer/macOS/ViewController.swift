@@ -19,7 +19,8 @@ class ViewController: NSViewController {
     
     // MARK: - Properties
     @IBOutlet weak var currentTimeLabel: NSTextField!
-    @IBOutlet weak var durationTimeLabel: NSTextField!
+	@IBOutlet weak var smartSpeedLabel: UILabel!
+	@IBOutlet weak var durationTimeLabel: NSTextField!
     @IBOutlet weak var playbackControlsStackView: NSStackView!
     @IBOutlet weak var playButton: NSButton! {
         willSet {
