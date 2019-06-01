@@ -19,7 +19,7 @@ public protocol StreamingDelegate: class {
     ///   - streamer: The current `Streaming` instance
     ///   - error: An `Error` representing the reason the download failed
     ///   - url: A `URL` representing the current resource the progress value is for.
-    func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL)
+    func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL, readyData bytes: Int64, response: URLResponse)
     
     /// Triggered when the downloader's progress value changes.
     ///

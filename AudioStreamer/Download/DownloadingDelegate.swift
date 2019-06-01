@@ -30,7 +30,7 @@ public protocol DownloadingDelegate: class {
     /// - Parameters:
     ///   - download: The current `Downloading` instance
     ///   - error: An optional `Error` if the download failed to complete. If there were no errors then this will be nil.
-    func download(_ download: Downloading, completedWithError error: Error?)
+    func download(_ download: Downloading, completedWithError error: Error?, bytesReceived: Int64, dataTask task: URLSessionTask)
     
     /// Triggered periodically whenever the `Downloading` instance has more data. In addition, this method provides the current progress of the overall operation as a float.
     ///

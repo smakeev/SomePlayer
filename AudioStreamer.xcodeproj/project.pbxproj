@@ -74,6 +74,7 @@
 		B6137506229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B6137507229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B61FBB1B22A1B2D800B7D839 /* SomePlayerActionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */; };
+		B622B2AD22A30E2200842508 /* ResumableData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B622B2AC22A30E2200842508 /* ResumableData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +121,7 @@
 		B61374FE229F124F00694CF2 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		B6137504229F133E00694CF2 /* TimePitchStreamer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimePitchStreamer.swift; sourceTree = "<group>"; };
 		B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomePlayerActionView.swift; sourceTree = "<group>"; };
+		B622B2AC22A30E2200842508 /* ResumableData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumableData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -263,6 +265,7 @@
 			isa = PBXGroup;
 			children = (
 				B6137504229F133E00694CF2 /* TimePitchStreamer.swift */,
+				B622B2AC22A30E2200842508 /* ResumableData.swift */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -454,6 +457,7 @@
 				66C8350E2001AAF400E953C7 /* Parser+Packets.swift in Sources */,
 				665DDED020C7ADEC00CBC330 /* TimeInterval+MMSS.swift in Sources */,
 				665DDECE20C7AD1F00CBC330 /* ProgressSlider.swift in Sources */,
+				B622B2AD22A30E2200842508 /* ResumableData.swift in Sources */,
 				66A1DBC120C7201500A29E34 /* StreamingState.swift in Sources */,
 				66C8350820019AD300E953C7 /* ParserError.swift in Sources */,
 				66A1DBC320C7212100A29E34 /* StreamingDelegate.swift in Sources */,

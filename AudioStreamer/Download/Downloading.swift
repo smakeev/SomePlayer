@@ -38,5 +38,7 @@ public protocol Downloading: class {
     
     /// Stops and/or aborts the downloader. This should invalidate all cached data under the hood.
     func stop()
+	
+    func resume(_ resumableData: ResumableData)
     
 }

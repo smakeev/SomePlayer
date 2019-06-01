@@ -54,7 +54,9 @@ public protocol Streaming: class {
     var volume: Float { get set }
     
     // MARK: - Methods
-    
+	
+	func resume(_ resumableData: ResumableData)
+	
     /// Begins playback
     func play()
     

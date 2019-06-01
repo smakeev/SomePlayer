@@ -17,12 +17,12 @@ extension Streamer: DownloadingDelegate {
 		}
 	}
 	
-    public func download(_ download: Downloading, completedWithError error: Error?) {
+    public func download(_ download: Downloading, completedWithError error: Error?, bytesReceived: Int64, dataTask task: URLSessionTask) {
         os_log("%@ - %d [error: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: error?.localizedDescription))
         
-        if let error = error, let url = download.url {
+		if let error = error, let url = download.url, let response = task.response {
             DispatchQueue.main.async { [unowned self] in
-                self.delegate?.streamer(self, failedDownloadWithError: error, forURL: url)
+                self.delegate?.streamer(self, failedDownloadWithError: error, forURL: url, readyData: bytesReceived, response: response)
             }
         }
     }

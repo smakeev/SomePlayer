@@ -142,7 +142,11 @@ open class Streamer: Streaming {
     }
     
     // MARK: - Methods
-    
+	
+	public func resume(_ resumableData: ResumableData) {
+		downloader.resume(resumableData)
+	}
+	
     public func play() {
         os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
         

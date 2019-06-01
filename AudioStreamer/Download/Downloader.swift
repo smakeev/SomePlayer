@@ -64,7 +64,9 @@ public class Downloader: NSObject, Downloading {
                 state = .notStarted
                 totalBytesCount = 0
                 totalBytesReceived = 0
-                task = session.dataTask(with: url)
+                var request = URLRequest(url: url)
+                //todo add headers if needed
+                task = session.dataTask(with: request)
             } else {
                 task = nil
             }
@@ -88,7 +90,22 @@ public class Downloader: NSObject, Downloading {
             task.resume()
         }
     }
-    
+	
+	public func resume(_ resumableData: ResumableData) {
+		guard let url = url else { return }
+		stop()
+		let bytesHave = resumableData.offset + resumableData.readyData
+		var request = URLRequest(url: url)
+		var headers = request.allHTTPHeaderFields ?? [:]
+		headers["Range"] = "bytes=\(bytesHave)-"
+		if !resumableData.validator.isEmpty {
+			headers["If-Range"] = resumableData.validator
+		}
+		request.allHTTPHeaderFields = headers
+		task = session.dataTask(with: request)
+		start()
+	}
+	
     public func pause() {
         os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
         
@@ -106,7 +123,7 @@ public class Downloader: NSObject, Downloading {
     
     public func stop() {
         os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
-        
+        state = .stopped
         guard let task = task else {
             return
         }
@@ -115,7 +132,7 @@ public class Downloader: NSObject, Downloading {
             return
         }
         
-        state = .stopped
+		
         task.cancel()
     }
 }

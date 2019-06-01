@@ -33,10 +33,35 @@ open class SomePlayer: NSObject {
 		}
 	}
 	
-	public internal(set) var fileDownloaded: Bool  = false
+	public internal(set) var fileDownloaded: Bool  = false {
+		didSet {
+			if fileDownloaded == true {
+				resumableData = nil
+			}
+		}
+	}
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0
-	public internal(set) var hasBytes:       Int64 = 0
+	//public internal(set) var hasBytes:       Int64 = 0
+	public               var offset:         Int64 = 0 {
+		didSet {
+			resumableData = nil
+		}
+	}
+	public internal(set) var hasError:       Bool = false
+	
+	public fileprivate(set) var resumableData: ResumableData?
+	
+	
+	public func resume() {
+		guard !fileDownloaded else { return }
+		if resumableData == nil {
+			//just start from the beginnig
+			streamer.url = self.url
+		} else {
+			streamer.resume(resumableData!)
+		}
+	}
 	
 	public var sampleRate: Double? {
 		get {
@@ -70,6 +95,9 @@ open class SomePlayer: NSObject {
 	}
 	
 	public func play() {
+		if hasError {
+			resume()
+		}
 		streamer.play()
 	}
 	
@@ -202,12 +230,15 @@ extension SomePlayer: StreamingDelegate {
 		self.rangeHeader = hasRangeHeader
 	}
 	
-	public func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL) {
+	public func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL, readyData bytes: Int64, response: URLResponse) {
+		hasError = true
+		resumableData = ResumableData(offset: offset, response: response, readyData: bytes)
 		delegate?.player(self, failedDownloadWithError: error, forURL: url)
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
 		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
+		hasError = false
 		if progress == 1.0 {
 			fileDownloaded = true
 		}
