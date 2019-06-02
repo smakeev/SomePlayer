@@ -17,8 +17,15 @@ public class Parser: Parsing {
     static let loggerPropertyListenerCallback = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser.PropertyListener")
     
     // MARK: - Parsing props
-    
-    public internal(set) var dataFormat: AVAudioFormat?
+	
+	public var formatObserver: ((AVAudioFormat?) -> Void)? = nil
+	
+    public internal(set) var dataFormat: AVAudioFormat? {
+    	didSet {
+    		//inform delegate
+    		formatObserver?(dataFormat)
+		}
+	}
     public internal(set) var packets = [(Data, AudioStreamPacketDescription?)]()
     public var totalPacketCount: AVAudioPacketCount? {
         guard let _ = dataFormat else {

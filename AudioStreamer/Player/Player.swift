@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AVFoundation
 
 public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL)
@@ -40,9 +41,32 @@ open class SomePlayer: NSObject {
 			}
 		}
 	}
+	
+	public internal(set) var format: AVAudioFormat? {
+		didSet {
+			//calc est duration.
+			guard totalSize > 0 else { return }
+			guard let format = format else {
+				estimatedDuration = 0
+				return
+			}
+			let framesPerPacket = format.streamDescription.pointee.mFramesPerPacket
+			let formatRaw = format.streamDescription.pointee
+			let bytesPerPacket = Int64(formatRaw.mBytesPerPacket)
+			let packets = totalSize / bytesPerPacket
+			let frames = Int64(framesPerPacket) * packets
+			
+			estimatedDuration = TimeInterval(frames) / TimeInterval(format.sampleRate)
+			print(estimatedDuration)
+		}
+	}
+	public internal(set) var hasDuration:       TimeInterval = 0
+	public internal(set) var estimatedDuration: TimeInterval = 0
+	
+	
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0
-	//public internal(set) var hasBytes:       Int64 = 0
+ 
 	public               var offset:         Int64 = 0 {
 		didSet {
 			resumableData = nil
@@ -239,7 +263,7 @@ extension SomePlayer: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
 		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
 		hasError = false
-		if progress == 1.0 {
+		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true
 		}
 	}
@@ -304,6 +328,11 @@ extension SomePlayer: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
+		hasDuration = duration
 		delegate?.player(self, updatedDuration: duration)
+	}
+	
+	public func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?) {
+		self.format = format
 	}
 }

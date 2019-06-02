@@ -139,13 +139,14 @@ class ViewController: UIViewController {
 	
 	@IBAction func seek(_ sender: UISlider) {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
-		
+	
 		do {
 			let time = TimeInterval(progressSlider.value)
 			try player.seek(to: time)
 		} catch {
-			os_log("Failed to seek: %@", log: ViewController.logger, type: .error, error.localizedDescription)
+				os_log("Failed to seek: %@", log: ViewController.logger, type: .error, error.localizedDescription)
 		}
+		
 	}
 	
 	@IBAction func progressSliderTouchedDown(_ sender: UISlider) {

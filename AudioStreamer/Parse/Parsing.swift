@@ -31,7 +31,9 @@ public protocol Parsing: class {
     
     /// The total packet count (expressed in the data format)
     var totalPacketCount: AVAudioPacketCount? { get }
-    
+	
+	var formatObserver: ((AVAudioFormat?) -> Void)? { get set }
+	
     // MARK: - Methods
     
     /// Given some data the parser should attempt to convert it into to audio packets.
@@ -56,12 +58,12 @@ public protocol Parsing: class {
     /// - Parameter frame: An `AVAudioFrameCount` representing the desired frame
     /// - Returns: An optional `TimeInterval` representing the time relative to the frame. If the `dataFormat`, total frame count, or duration is unknown then this will return nil.
     func timeOffset(forFrame frame: AVAudioFrameCount) -> TimeInterval?
-    
+	
 }
 
 // Usually these methods are gonna be calculated using the same way everytime so here are the default implementations that should work 99% of the time relative to the properties defined. 
 extension Parsing {
-    
+	
     public var duration: TimeInterval? {
         guard let sampleRate = dataFormat?.sampleRate else {
             return nil
