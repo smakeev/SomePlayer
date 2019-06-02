@@ -139,12 +139,13 @@ class ViewController: UIViewController {
 	
 	@IBAction func seek(_ sender: UISlider) {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
-	
-		do {
-			let time = TimeInterval(progressSlider.value)
-			try player.seek(to: time)
-		} catch {
+		if player.fileDownloaded {
+			do {
+				let time = TimeInterval(progressSlider.value)
+				try player.seek(to: time)
+			} catch {
 				os_log("Failed to seek: %@", log: ViewController.logger, type: .error, error.localizedDescription)
+			}
 		}
 		
 	}
@@ -157,9 +158,10 @@ class ViewController: UIViewController {
 	
 	@IBAction func progressSliderValueChanged(_ sender: UISlider) {
 		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
-		
-		let currentTime = TimeInterval(progressSlider.value)
-		currentTimeLabel.text = currentTime.toMMSS()
+		if player.fileDownloaded {
+			let currentTime = TimeInterval(progressSlider.value)
+			currentTimeLabel.text = currentTime.toMMSS()
+		}
 	}
 	
 	@IBAction func progressSliderTouchedUp(_ sender: UISlider) {

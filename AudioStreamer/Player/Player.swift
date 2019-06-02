@@ -51,13 +51,12 @@ open class SomePlayer: NSObject {
 				return
 			}
 			let framesPerPacket = format.streamDescription.pointee.mFramesPerPacket
-			let formatRaw = format.streamDescription.pointee
-			let bytesPerPacket = Int64(formatRaw.mBytesPerPacket)
-			let packets = totalSize / bytesPerPacket
-			let frames = Int64(framesPerPacket) * packets
+			let bytesPerPacket = format.streamDescription.pointee.mBytesPerPacket
+			//let packets = totalSize / bytesPerPacket
+			//let frames = Int64(framesPerPacket) * packets
 			
-			estimatedDuration = TimeInterval(frames) / TimeInterval(format.sampleRate)
-			print(estimatedDuration)
+			//estimatedDuration = TimeInterval(frames) / TimeInterval(format.sampleRate)
+			//print(estimatedDuration.toMMSS())
 		}
 	}
 	public internal(set) var hasDuration:       TimeInterval = 0

@@ -59,7 +59,7 @@ public class Parser: Parsing {
     }
     
     // MARK: - Methods
-    
+	
     public func parse(data: Data) throws {
         os_log("%@ - %d", log: Parser.logger, type: .debug, #function, #line)
         

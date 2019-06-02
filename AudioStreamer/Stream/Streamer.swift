@@ -137,7 +137,7 @@ open class Streamer: Streaming {
 		do {
 			parser = try Parser()
 			parser?.formatObserver = { format in
-				
+				self.delegate?.streamer(self, willProvideFormat: format)
 			}
 		} catch {
 			os_log("Failed to create parser: %@", log: Streamer.logger, type: .error, error.localizedDescription)
@@ -270,6 +270,7 @@ open class Streamer: Streaming {
 	}
 	
 	// MARK: - Scheduling Buffers
+	//schedulefile for local file
 	
 	func scheduleNextBuffer() {
 		guard let reader = reader else {

@@ -58,7 +58,6 @@ public protocol Parsing: class {
     /// - Parameter frame: An `AVAudioFrameCount` representing the desired frame
     /// - Returns: An optional `TimeInterval` representing the time relative to the frame. If the `dataFormat`, total frame count, or duration is unknown then this will return nil.
     func timeOffset(forFrame frame: AVAudioFrameCount) -> TimeInterval?
-	
 }
 
 // Usually these methods are gonna be calculated using the same way everytime so here are the default implementations that should work 99% of the time relative to the properties defined. 
@@ -124,5 +123,4 @@ extension Parsing {
         
         return TimeInterval(frame) / TimeInterval(frameCount) * duration
     }
-    
 }

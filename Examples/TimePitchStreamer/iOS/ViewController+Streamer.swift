@@ -52,13 +52,17 @@ extension ViewController: SomePlayerDelegate {
     func player(_ player: SomePlayer, updatedDuration duration: TimeInterval) {
         let formattedDuration = duration.toMMSS()
        // os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
-        
-        durationTimeLabel.text = formattedDuration
+        if player.fileDownloaded {
+        	durationTimeLabel.text = formattedDuration
+			progressSlider.minimumValue = 0.0
+        	progressSlider.maximumValue = Float(duration)
+		} else {
+			progressSlider.maximumValue = Float(player.totalSize)
+		}
+
         durationTimeLabel.isEnabled = true
         playButton.isEnabled = true
         progressSlider.isEnabled = true
-        progressSlider.minimumValue = 0.0
-        progressSlider.maximumValue = Float(duration)
     }
 	
     func player(_ player: SomePlayer, savedSeconds: TimeInterval) {
