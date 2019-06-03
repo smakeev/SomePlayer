@@ -31,7 +31,6 @@ extension Downloader: URLSessionDataDelegate {
 		totalBytesReceived += Int64(data.count)
 
 		progress = Float(totalBytesReceived) / Float(totalBytesCount)
-        print("!!! progress: \(progress) = \(totalBytesReceived) : \(totalBytesCount)")
 		delegate?.download(self, didReceiveData: data, progress: progress)
 		progressHandler?(data, progress)
 	}

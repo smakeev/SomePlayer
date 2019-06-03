@@ -64,11 +64,12 @@ open class SomePlayer: NSObject {
 	
 	
 	public internal(set) var rangeHeader:    Bool  = false
-    public internal(set) var totalSize:      Int64 = 0
-
+	public internal(set) var totalSize:      Int64 = 0
+	public internal(set) var hasBytes:       Int64 = 0
 	public               var offset:         Int64 = 0 {
 		didSet {
 			resumableData = nil
+			hasBytes = 0
 		}
 	}
 	public internal(set) var hasError:       Bool = false
@@ -133,6 +134,30 @@ open class SomePlayer: NSObject {
 		catch {
 			///
 		}
+	}
+
+	public func seekPercently(to percent: Float) {
+		guard percent >= 0.0 && percent <= 1.0 else { return }
+		if fileDownloaded {
+			let intervalToSeek = hasDuration * TimeInterval(percent)
+
+			seek(to: intervalToSeek)
+			return
+		}
+		//check if we in downloaded part
+		let weAreHere = offset + hasBytes
+		let percentWeAre = Float(weAreHere) / Float(totalSize)
+		let percentOffset = Float(offset) / Float(totalSize)
+		if percent >= percentOffset &&
+		   percent <= percentWeAre {
+
+			//We are inside downloaded area
+
+			//Find time
+
+			return
+		}
+		//make offset and restart downloading
 	}
 	
 	public var pitch: Float {
@@ -264,6 +289,7 @@ extension SomePlayer: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
 		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
 		hasError = false
+		hasBytes = Int64(Float(totalSize) * progress) - offset
 
 		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true

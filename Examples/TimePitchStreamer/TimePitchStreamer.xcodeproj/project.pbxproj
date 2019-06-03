@@ -183,6 +183,7 @@
 				66C8352B2002C67700E953C7 /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
 		};
 		66C8352B2002C67700E953C7 /* Products */ = {
 			isa = PBXGroup;
