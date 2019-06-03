@@ -123,6 +123,7 @@ public class Downloader: NSObject, Downloading {
     
     public func stop() {
         os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
+        totalBytesReceived = 0
         state = .stopped
         guard let task = task else {
             return
@@ -132,7 +133,7 @@ public class Downloader: NSObject, Downloading {
             return
         }
         
-		
+
         task.cancel()
     }
 }

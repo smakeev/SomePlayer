@@ -64,8 +64,8 @@ open class SomePlayer: NSObject {
 	
 	
 	public internal(set) var rangeHeader:    Bool  = false
-	public internal(set) var totalSize:      Int64 = 0
- 
+    public internal(set) var totalSize:      Int64 = 0
+
 	public               var offset:         Int64 = 0 {
 		didSet {
 			resumableData = nil
@@ -249,7 +249,9 @@ extension SomePlayer: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, hasRangeHeader: Bool, totalSize: Int64) {
-		self.totalSize = totalSize
+        if self.totalSize < totalSize {
+            self.totalSize = totalSize
+        }
 		self.rangeHeader = hasRangeHeader
 	}
 	
@@ -262,6 +264,7 @@ extension SomePlayer: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
 		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
 		hasError = false
+
 		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true
 		}
