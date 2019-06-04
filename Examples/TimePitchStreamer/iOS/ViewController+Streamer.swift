@@ -44,7 +44,7 @@ extension ViewController: SomePlayerDelegate {
       //  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
         
         if !isSeeking {
-            progressSlider.value = Float(currentTime)
+           // progressSlider.value = Float(currentTime)
             currentTimeLabel.text = currentTime.toMMSS()
         }
     }
@@ -54,8 +54,8 @@ extension ViewController: SomePlayerDelegate {
        // os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
         if player.fileDownloaded {
         	durationTimeLabel.text = formattedDuration
-			progressSlider.minimumValue = 0.0
-        	progressSlider.maximumValue = Float(duration)
+//			progressSlider.minimumValue = 0.0
+//        	progressSlider.maximumValue = Float(duration)
 		} else {
 			progressSlider.maximumValue = Float(player.totalSize)
 		}

@@ -161,7 +161,7 @@ class ViewController: UIViewController {
 	@IBAction func progressSliderValueChanged(_ sender: UISlider) {
 		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		if player.fileDownloaded {
-			let currentTime = TimeInterval(progressSlider.value)
+			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * player.hasDuration
 			currentTimeLabel.text = currentTime.toMMSS()
 		}
 	}

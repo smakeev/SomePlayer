@@ -152,12 +152,14 @@ open class SomePlayer: NSObject {
 		   percent <= percentWeAre {
 
 			//We are inside downloaded area
-
-			//Find time
-
+			let percentWide = percentWeAre - percentOffset
+			let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
+			print("!!! \(timeToSeek) of \(hasDuration)")
+			seek(to: timeToSeek)
 			return
 		}
 		//make offset and restart downloading
+		print("!!! Need to restart fromy")
 	}
 	
 	public var pitch: Float {
@@ -288,7 +290,7 @@ extension SomePlayer: StreamingDelegate {
 	
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
 		hasError = false
-		hasBytes += bytes//Int64(Float(totalSize) * progress) - offset
+		hasBytes += bytes
 
 		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true
