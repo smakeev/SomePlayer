@@ -154,12 +154,12 @@ open class SomePlayer: NSObject {
 			//We are inside downloaded area
 			let percentWide = percentWeAre - percentOffset
 			let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
-			print("!!! \(timeToSeek) of \(hasDuration)")
 			seek(to: timeToSeek)
 			return
 		}
 		//make offset and restart downloading
 		print("!!! Need to restart fromy")
+		
 	}
 	
 	public var pitch: Float {
