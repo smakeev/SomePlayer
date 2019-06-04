@@ -48,7 +48,10 @@ extension ViewController: SomePlayerDelegate {
             currentTimeLabel.text = currentTime.toMMSS()
 			if player.fileDownloaded {
 				progressSlider.value = Float(currentTime / player.hasDuration) * Float(player.totalSize)
-				print("!!! \(progressSlider.value)")
+			} else {
+				let currentPercentOfDownloadedData = Float(currentTime / player.hasDuration)
+				let currentByte = Float(player.hasBytes) * currentPercentOfDownloadedData
+				progressSlider.value = Float(player.offset) + currentByte
 			}
         }
     }
