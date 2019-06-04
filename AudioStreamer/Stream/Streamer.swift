@@ -53,7 +53,7 @@ open class Streamer: Streaming {
 	
 	public private(set) var averagePower: Float = -160 {
 		didSet {
-			print(averagePower)
+//            print(averagePower)
 		}
 	}
 	
@@ -345,12 +345,12 @@ open class Streamer: Streaming {
 	
 	// MARK: - Notifying The Delegate
 	
-	func notifyDownloadProgress(_ progress: Float) {
+    func notifyDownloadProgress(_ progress: Float, bytes: Int64) {
 		guard let url = url else {
 			return
 		}
 		
-		delegate?.streamer(self, updatedDownloadProgress: progress, forURL: url)
+        delegate?.streamer(self, updatedDownloadProgress: progress, bytesReceived: bytes, forURL: url)
 	}
 	
 	func notifyDurationUpdate(_ duration: TimeInterval) {

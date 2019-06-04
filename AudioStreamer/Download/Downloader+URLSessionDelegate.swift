@@ -29,7 +29,6 @@ extension Downloader: URLSessionDataDelegate {
 		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line, data.count)
 		
 		totalBytesReceived += Int64(data.count)
-
 		progress = Float(totalBytesReceived) / Float(totalBytesCount)
 		delegate?.download(self, didReceiveData: data, progress: progress)
 		progressHandler?(data, progress)

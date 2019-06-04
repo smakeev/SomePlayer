@@ -23,7 +23,7 @@ extension ViewController: SomePlayerDelegate {
         show(alert, sender: self)
     }
     
-    func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, forURL url: URL) {
+	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
       //  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
         
         progressSlider.progress = progress

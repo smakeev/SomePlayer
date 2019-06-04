@@ -11,7 +11,7 @@ import AVFoundation
 
 public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL)
-	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, forURL url: URL)
+	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
 	func player(_ player: SomePlayer, changedState state: StreamingState)
 	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval)
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
@@ -286,14 +286,15 @@ extension SomePlayer: StreamingDelegate {
 		delegate?.player(self, failedDownloadWithError: error, forURL: url)
 	}
 	
-	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
-		delegate?.player(self, updatedDownloadProgress: progress, forURL: url)
+	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
 		hasError = false
-		hasBytes = Int64(Float(totalSize) * progress) - offset
+		hasBytes += bytes//Int64(Float(totalSize) * progress) - offset
 
 		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true
 		}
+		let totalProgress = Float(hasBytes) / Float(totalSize)
+		delegate?.player(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
 	}
 	
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {

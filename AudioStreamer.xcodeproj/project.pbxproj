@@ -100,7 +100,7 @@
 		66A1397520013FAA0076B0E5 /* Downloading.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Downloading.swift; sourceTree = "<group>"; };
 		66A1397620013FAA0076B0E5 /* DownloadingDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DownloadingDelegate.swift; sourceTree = "<group>"; };
 		66A139822001546D0076B0E5 /* DownloadingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadingState.swift; sourceTree = "<group>"; };
-		66A13985200156790076B0E5 /* Downloader+URLSessionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Downloader+URLSessionDelegate.swift"; sourceTree = "<group>"; };
+		66A13985200156790076B0E5 /* Downloader+URLSessionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Downloader+URLSessionDelegate.swift"; sourceTree = "<group>"; usesTabs = 1; };
 		66A13992200176B60076B0E5 /* Parsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Parsing.swift; sourceTree = "<group>"; };
 		66A13995200177050076B0E5 /* Parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Parser.swift; sourceTree = "<group>"; };
 		66A1399B200179AD0076B0E5 /* ParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParserTests.swift; sourceTree = "<group>"; };

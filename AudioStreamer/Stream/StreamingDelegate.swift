@@ -28,7 +28,7 @@ public protocol StreamingDelegate: class {
 	///   - streamer: The current `Streaming` instance
 	///   - progress: A `Float` representing the current progress ranging from 0 - 1.
 	///   - url: A `URL` representing the current resource the progress value is for.
-	func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL)
+    func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL)
 	
 	/// Triggered when the playback `state` changes.
 	///

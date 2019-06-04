@@ -60,7 +60,7 @@ extension Streamer: DownloadingDelegate {
             [weak self] in
             
             // Notify the delegate of the new progress value of the download
-            self?.notifyDownloadProgress(progress)
+            self?.notifyDownloadProgress(progress, bytes: Int64(data.count))
             
             // Check if we have the duration
             self?.handleDurationUpdate()
