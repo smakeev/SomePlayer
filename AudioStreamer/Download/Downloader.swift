@@ -98,9 +98,9 @@ public class Downloader: NSObject, Downloading {
 		var request = URLRequest(url: url)
 		var headers = request.allHTTPHeaderFields ?? [:]
 		headers["Range"] = "bytes=\(bytesHave)-"
-		if !resumableData.validator.isEmpty {
-			headers["If-Range"] = resumableData.validator
-		}
+//        if !resumableData.validator.isEmpty {
+//            headers["If-Range"] = resumableData.validator
+//        }
 		request.allHTTPHeaderFields = headers
 		task = session.dataTask(with: request)
 		start()

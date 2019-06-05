@@ -158,10 +158,16 @@ open class SomePlayer: NSObject {
 			return
 		}
 		//make offset and restart downloading
-		print("!!! Need to restart fromy")
-		
+		offset = Int64(Float(totalSize) * percent)
+		resumableData = ResumableData(offset: offset)
+		restart()
 	}
-	
+
+	public func restart() {
+		streamer.reset()
+		resume()
+	}
+
 	public var pitch: Float {
 		get {
 			return streamer.pitch
