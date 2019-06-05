@@ -44,7 +44,14 @@ public class ProgressSlider: UISlider {
             progressView.progressTintColor = newValue
         }
     }
-    
+
+	public var offset: Float = 0 {
+		didSet {
+			let trackFrame = super.trackRect(forBounds: bounds)
+			progressView.frame.origin.x = 0 + CGFloat(offset) * (trackFrame.width)
+		}
+	}
+
     /// Setup / Drawing
     
     override init(frame: CGRect) {
@@ -58,17 +65,30 @@ public class ProgressSlider: UISlider {
     }
     
     func setup() {
-        insertSubview(progressView, at: 0)
+
+		let emptyPath: UIView = UIView()
+		insertSubview(emptyPath, at: 0)
+		let trackFrame = super.trackRect(forBounds: bounds)
+		var center = CGPoint(x: 0, y: 0)
+		center.y = floor(frame.height / 2 + progressView.frame.height / 2)
+		emptyPath.center = center
+		emptyPath.frame.origin.x = 0
+		emptyPath.frame.size.width = trackFrame.width
+		emptyPath.frame.size.height = 1.5
+		emptyPath.autoresizingMask = [.flexibleWidth]
+		emptyPath.clipsToBounds = true
+		emptyPath.layer.cornerRadius = 2
+		emptyPath.backgroundColor = .gray
+
+        insertSubview(progressView, at: 1)
         
-        let trackFrame = super.trackRect(forBounds: bounds)
-        var center = CGPoint(x: 0, y: 0)
-        center.y = floor(frame.height / 2 + progressView.frame.height / 2)
         progressView.center = center
-        progressView.frame.origin.x = 2
-        progressView.frame.size.width = trackFrame.width - 4
+        progressView.frame.origin.x = 0 + CGFloat(offset) * (trackFrame.width)
+        progressView.frame.size.width = trackFrame.width
         progressView.autoresizingMask = [.flexibleWidth]
         progressView.clipsToBounds = true
         progressView.layer.cornerRadius = 2
+		self.clipsToBounds = true
     }
     
     public override func trackRect(forBounds bounds: CGRect) -> CGRect {

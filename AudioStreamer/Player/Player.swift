@@ -16,6 +16,7 @@ public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval)
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
 	func player(_ player: SomePlayer, savedSeconds: TimeInterval)
+	func player(_ player: SomePlayer, offsetChanged offset: Int64)
 }
 
 
@@ -64,12 +65,25 @@ open class SomePlayer: NSObject {
 	
 	
 	public internal(set) var rangeHeader:    Bool  = false
-	public internal(set) var totalSize:      Int64 = 0
-	public internal(set) var hasBytes:       Int64 = 0
+	public internal(set) var totalSize:      Int64 = 0 {
+		didSet {
+			//print("!!! total: \(totalSize)")
+		}
+	}
+	public internal(set) var hasBytes:       Int64 = 0 {
+		didSet {
+			//print("!!! has bytes: \(hasBytes)")
+			if hasBytes > totalSize {
+				totalSize = hasBytes
+			}
+		}
+	}
 	public               var offset:         Int64 = 0 {
 		didSet {
 			resumableData = nil
 			hasBytes = 0
+			delegate?.player(self, offsetChanged: offset)
+			//print("!!! offset \(offset) : \(Float(offset) / Float(totalSize))")
 		}
 	}
 	public internal(set) var hasError:       Bool = false
@@ -153,8 +167,12 @@ open class SomePlayer: NSObject {
 		   percent <= percentWeAre {
 
 			//We are inside downloaded area
+			//print("!!! SEEK INSIDE DOWNLOADED")
 			let percentWide = percentWeAre - percentOffset
-			let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
+			//let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
+			let hasWide = percent - percentOffset
+			let realPercent = hasWide / percentWide
+			let timeToSeek = TimeInterval(realPercent) * hasDuration
 			seek(to: timeToSeek)
 			return
 		}
@@ -169,8 +187,12 @@ open class SomePlayer: NSObject {
 	}
 
 	public func restart() {
+		let stateBefore = streamer.state
 		streamer.reset()
 		resume()
+		if stateBefore == .playing {
+			play()
+		}
 	}
 
 	public var pitch: Float {

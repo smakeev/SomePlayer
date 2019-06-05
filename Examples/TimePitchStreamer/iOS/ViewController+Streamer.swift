@@ -13,6 +13,10 @@ import UIKit
 
 extension ViewController: SomePlayerDelegate {
 
+	func player(_ player: SomePlayer, offsetChanged offset: Int64) {
+		progressSlider.offset = Float(offset) / Float(player.totalSize)
+	}
+
 	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL) {
 		// os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
 
@@ -25,7 +29,7 @@ extension ViewController: SomePlayerDelegate {
 
 	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
 		//  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
-
+		//print("!!! total progress: \(progress), current: \(currentProgress)")
 		progressSlider.progress = progress
 	}
 

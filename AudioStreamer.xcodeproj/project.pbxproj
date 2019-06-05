@@ -96,7 +96,7 @@
 		66A1396220013F860076B0E5 /* AudioStreamerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioStreamerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		66A1396720013F860076B0E5 /* DownloaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloaderTests.swift; sourceTree = "<group>"; };
 		66A1396920013F860076B0E5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		66A1397420013FAA0076B0E5 /* Downloader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Downloader.swift; sourceTree = "<group>"; };
+		66A1397420013FAA0076B0E5 /* Downloader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Downloader.swift; sourceTree = "<group>"; usesTabs = 1; };
 		66A1397520013FAA0076B0E5 /* Downloading.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Downloading.swift; sourceTree = "<group>"; };
 		66A1397620013FAA0076B0E5 /* DownloadingDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DownloadingDelegate.swift; sourceTree = "<group>"; };
 		66A139822001546D0076B0E5 /* DownloadingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadingState.swift; sourceTree = "<group>"; };
@@ -168,6 +168,7 @@
 				66A1395A20013F860076B0E5 /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
 		};
 		66A1395A20013F860076B0E5 /* Products */ = {
 			isa = PBXGroup;

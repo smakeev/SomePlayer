@@ -30,6 +30,7 @@ extension Downloader: URLSessionDataDelegate {
 		
 		totalBytesReceived += Int64(data.count)
 		progress = Float(totalBytesReceived) / Float(totalBytesCount)
+
 		delegate?.download(self, didReceiveData: data, progress: progress)
 		progressHandler?(data, progress)
 	}
@@ -37,8 +38,18 @@ extension Downloader: URLSessionDataDelegate {
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
 		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
 
-		state = .completed
-		delegate?.download(self, completedWithError: error, bytesReceived: totalBytesReceived, dataTask: task)
-		completionHandler?(error)
+		if self.task === task {
+			state = .completed
+		}
+		var errorToReturn: Error? = error
+
+		if let validError = error as NSError? {
+			if validError.code == -999 {
+				errorToReturn = nil
+			}
+		}
+
+		delegate?.download(self, completedWithError: errorToReturn, bytesReceived: totalBytesReceived, dataTask: task)
+		completionHandler?(errorToReturn)
 	}
 }

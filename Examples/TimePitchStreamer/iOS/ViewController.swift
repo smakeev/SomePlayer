@@ -168,7 +168,7 @@ class ViewController: UIViewController {
 		seek(sender)
 		isSeeking = false
 	}
-	
+
 	/// MARK: - Change Pitch
 	
 	@IBAction func changePitch(_ sender: UISlider) {
