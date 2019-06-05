@@ -144,6 +144,7 @@ open class SomePlayer: NSObject {
 			seek(to: intervalToSeek)
 			return
 		}
+
 		//check if we in downloaded part
 		let weAreHere = offset + hasBytes
 		let percentWeAre = Float(weAreHere) / Float(totalSize)
@@ -155,6 +156,10 @@ open class SomePlayer: NSObject {
 			let percentWide = percentWeAre - percentOffset
 			let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
 			seek(to: timeToSeek)
+			return
+		}
+		if !rangeHeader {
+			seek(to: hasDuration)
 			return
 		}
 		//make offset and restart downloading

@@ -139,17 +139,13 @@ class ViewController: UIViewController {
 	
 	@IBAction func seek(_ sender: UISlider) {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
-//		if player.fileDownloaded {
-		//	do {
-//				let time = TimeInterval(progressSlider.value)
-//				/*try*/ player.seek(to: time)
-		//	} catch {
-		//		os_log("Failed to seek: %@", log: ViewController.logger, type: .error, error.localizedDescription)
-		//	}
-//		} else {
+		if !player.rangeHeader {
+			let time = TimeInterval(progressSlider.value)
+			player.seek(to: time)
+		} else {
 			let percent = progressSlider.value / progressSlider.maximumValue
 			player.seekPercently(to: percent)
-//		}
+		}
 	}
 	
 	@IBAction func progressSliderTouchedDown(_ sender: UISlider) {
