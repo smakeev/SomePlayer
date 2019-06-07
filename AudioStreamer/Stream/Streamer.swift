@@ -40,23 +40,25 @@ open class Streamer: Streaming {
 			delegate?.streamer(self, changedState: state)
 		}
 	}
+
+	public var isLocal: Bool = false
+
 	public var url: URL? {
 		didSet {
 			reset()
-			
-			if let url = url {
-				downloader.url = url
-				downloader.start()
+			if !isLocal {
+				if let url = url {
+					downloader.url = url
+					downloader.start()
+				}
+			} else {
+				if let url = url {
+					audioFile = try? AVAudioFile(forReading: url)
+				}
 			}
 		}
 	}
-	
-	public private(set) var averagePower: Float = -160 {
-		didSet {
-//            print(averagePower)
-		}
-	}
-	
+
 	public var volume: Float {
 		get {
 			return engine.mainMixerNode.outputVolume
@@ -104,8 +106,11 @@ open class Streamer: Streaming {
 			guard self?.state != .stopped else {
 				return
 			}
-			
-			self?.scheduleNextBuffer()
+			//guard self?.isLocal != true else { return }
+
+			if self?.isLocal != true {
+				self?.scheduleNextBuffer()
+			}
 			self?.handleTimeUpdate()
 			self?.notifyTimeUpdated()
 		}
@@ -206,10 +211,48 @@ open class Streamer: Streaming {
 		// Update the state
 		state = .stopped
 	}
+
+	var seekFrame: AVAudioFramePosition = 0
+	var currentPosition: AVAudioFramePosition = 0
+	private func seekLocal(to time: TimeInterval) {
+		guard let audioFile = audioFile else { return }
+		let isPlaying = playerNode.isPlaying
+		let lastVolume = volumeRampTargetValue ?? volume
+		seekFrame = AVAudioFramePosition(Float(time) * audioSampleRate)
+		seekFrame = max(seekFrame, 0)
+		seekFrame = min(seekFrame, audioLengthSamples)
+		currentPosition = seekFrame
+		playerNode.stop()
+		volume = 0
+
+		if currentPosition < audioLengthSamples {
+			currentTimeOffset = time
+			isFileSchedulingComplete = false
+
+			playerNode.scheduleSegment(audioFile, startingFrame: seekFrame, frameCount: AVAudioFrameCount(audioLengthSamples - seekFrame), at: nil) { [weak self] in
+					self?.isFileSchedulingComplete = true
+			}
+		}
+
+		if isPlaying {
+			playerNode.play()
+		}
+
+		// Update the current time
+		delegate?.streamer(self, updatedCurrentTime: time)
+
+		// After 250ms we restore the volume back to where it was
+		swellVolume(to: lastVolume)
+	}
 	
 	public func seek(to time: TimeInterval) throws {
 		os_log("%@ - %d [%.1f]", log: Streamer.logger, type: .debug, #function, #line, time)
-		
+
+		if isLocal {
+			seekLocal(to: time)
+			return
+		}
+
 		// Make sure we have a valid parser and reader
 		guard let parser = parser, let reader = reader else {
 			return
@@ -272,6 +315,48 @@ open class Streamer: Streaming {
 	// MARK: - Scheduling Buffers
 	//schedulefile for local file
 	
+	func openLocal(_ url: URL) {
+		isLocal = true
+		self.url = url
+	}
+
+	func openRemote(_ url: URL) {
+		isLocal = false
+		self.url = url
+	}
+
+	var format: AVAudioFormat?
+	var audioSampleRate: Float = 0
+	var audioLengthSeconds: Float = 0
+	var audioLengthSamples: AVAudioFramePosition = 0
+	var audioFile: AVAudioFile? {
+		didSet {
+			if let audioFile = audioFile {
+				audioLengthSamples = audioFile.length
+				format = audioFile.processingFormat
+				audioSampleRate = Float(format?.sampleRate ?? 44100)
+				audioLengthSeconds = Float(audioLengthSamples) / audioSampleRate
+				scheduleFile()
+				self.duration = TimeInterval(audioLengthSeconds)
+				notifyDurationUpdate(self.duration!)
+				notifyDownloadProgress(1.0, bytes: audioFile.length)
+			}
+		}
+	}
+
+	func scheduleFile() {
+		guard !isFileSchedulingComplete else {
+			return
+		}
+		guard let validAudioFile = audioFile else {
+			return
+		}
+
+		playerNode.scheduleFile(validAudioFile, at: nil) {  [weak self] in
+			self?.isFileSchedulingComplete = true
+		}
+	}
+
 	func scheduleNextBuffer() {
 		guard let reader = reader else {
 			os_log("No reader yet...", log: Streamer.logger, type: .debug)
@@ -369,7 +454,7 @@ open class Streamer: Streaming {
 		guard let currentTime = currentTime else {
 			return
 		}
-		
+
 		delegate?.streamer(self, updatedCurrentTime: currentTime)
 	}
 }

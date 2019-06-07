@@ -114,18 +114,48 @@ open class SomePlayer: NSObject {
 		streamer.delegate = self
 		return streamer
 	}()
-	
-	public var url: URL? {
+
+    public var isLocal: Bool = false
+
+	public internal(set) var url: URL? {
 		get { return streamer.url }
 		set {
-			streamer.url = newValue
+			guard let validURL = newValue else { return }
+			if !isLocal {
+				streamer.openRemote(validURL)
+			} else {
+				streamer.openLocal(validURL)
+			}
 		}
 	}
+
+//    var audioLengthSeconds: Float = 0
+//    var audioLengthSamples: AVAudioFramePosition = 0
+//    var audioSampleRate: Float = 0
+
 	
 	public var state: StreamingState {
 		get {
 			return streamer.state
 		}
+	}
+
+	public func openRemote(_ url: URL) {
+		isLocal = false
+		streamer.reset()
+		fileDownloaded = false
+		hasError = false
+		rangeHeader = false
+		self.url = url
+	}
+
+	public func openLocal(_  url: URL) {
+		isLocal = true
+		streamer.reset()
+		fileDownloaded = true
+		hasError = false
+		rangeHeader = false
+		self.url = url
 	}
 	
 	public func pause() {
@@ -154,7 +184,6 @@ open class SomePlayer: NSObject {
 		guard percent >= 0.0 && percent <= 1.0 else { return }
 		if fileDownloaded {
 			let intervalToSeek = hasDuration * TimeInterval(percent)
-
 			seek(to: intervalToSeek)
 			return
 		}
@@ -167,7 +196,6 @@ open class SomePlayer: NSObject {
 		   percent <= percentWeAre {
 
 			//We are inside downloaded area
-			//print("!!! SEEK INSIDE DOWNLOADED")
 			let percentWide = percentWeAre - percentOffset
 			//let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
 			let hasWide = percent - percentOffset
