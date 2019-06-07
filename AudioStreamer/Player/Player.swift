@@ -60,7 +60,18 @@ open class SomePlayer: NSObject {
 			//print(estimatedDuration.toMMSS())
 		}
 	}
-	public internal(set) var hasDuration:       TimeInterval = 0
+
+	public var duration:         TimeInterval{
+		get {
+			return max(hasDuration, estimatedDuration)
+		}
+	}
+
+	public internal(set) var hasDuration:       TimeInterval = 0 {
+		didSet {
+			print("!!! \(hasDuration)")
+		}
+	}
 	public internal(set) var estimatedDuration: TimeInterval = 0
 	
 	
@@ -358,6 +369,7 @@ extension SomePlayer: StreamingDelegate {
 		}
 		let totalProgress = Float(hasBytes) / Float(totalSize)
 		delegate?.player(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
+		delegate?.player(self, updatedDuration: duration)
 	}
 	
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {

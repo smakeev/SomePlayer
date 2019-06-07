@@ -73,8 +73,14 @@ class ViewController: UIViewController {
 //		player.openLocal(audioFileURL!)
 
 	//Remote file
-		//let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
-		let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
+		//let str = "https://cdn.fastlearner.media/bensound-rumble.mp3"
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_700KB.mp3" //700km
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3" //1 MG
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_2MG.mp3" //2 MG
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_5MG.mp3" // MG
+		let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
+
+		let url = URL(string: str)!
 		player.openRemote(url)
 
 		player.addRateObserver(withId: "controller") { value in
