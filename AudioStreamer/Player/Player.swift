@@ -8,6 +8,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 
 public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL)
@@ -69,7 +70,7 @@ open class SomePlayer: NSObject {
 
 	public internal(set) var hasDuration:       TimeInterval = 0 {
 		didSet {
-			print("!!! \(hasDuration)")
+
 		}
 	}
 	public internal(set) var estimatedDuration: TimeInterval = 0
@@ -151,6 +152,29 @@ open class SomePlayer: NSObject {
 		}
 	}
 
+	public private(set) var title: String? {
+		didSet {
+			print("!!! TITLE: \(title)")
+		}
+	}
+	public private(set) var artist: String? {
+		didSet {
+			print("!!! ARTIST: \(artist)")
+		}
+	}
+	public private(set) var album: String? {
+		didSet {
+			print("!!! ARTIST: \(album)")
+		}
+	}
+	public private(set) var image: UIImage? {
+		didSet {
+			print("!!! ARTIST: \(image)")
+		}
+	}
+
+
+	private var asset: AVAsset!
 	public func openRemote(_ url: URL) {
 		isLocal = false
 		streamer.reset()
@@ -158,6 +182,39 @@ open class SomePlayer: NSObject {
 		hasError = false
 		rangeHeader = false
 		self.url = url
+		asset = AVURLAsset(url: url)
+
+		let metadata = asset.commonMetadata
+		let availableMetaFormats = asset.availableMetadataFormats
+		for format in availableMetaFormats {
+
+			for item in asset.metadata(forFormat: format) {
+
+				if let commonKey = item.commonKey {
+					if commonKey.rawValue == "title" {
+						title = item.value as? String
+						//continue
+					}
+					if commonKey.rawValue == "artist" {
+						artist = item.value as? String
+						//continue
+					}
+					if commonKey.rawValue == "albumName" {
+						album = item.value as? String
+						//continue
+					}
+					if commonKey.rawValue == "artwork" {
+						if let value = item.value {
+							if let data = value as? Data {
+								let image = UIImage(data: data)
+								self.image = image
+							}
+						}
+						continue
+					}
+				}
+			}
+		}
 	}
 
 	public func openLocal(_  url: URL) {
