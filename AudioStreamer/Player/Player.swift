@@ -154,66 +154,80 @@ open class SomePlayer: NSObject {
 
 	public private(set) var title: String? {
 		didSet {
-			print("!!! TITLE: \(title)")
+
 		}
 	}
 	public private(set) var artist: String? {
 		didSet {
-			print("!!! ARTIST: \(artist)")
+			
 		}
 	}
 	public private(set) var album: String? {
 		didSet {
-			print("!!! ARTIST: \(album)")
+
 		}
 	}
 	public private(set) var image: UIImage? {
 		didSet {
-			print("!!! ARTIST: \(image)")
+
 		}
 	}
 
 
-	private var asset: AVAsset!
+	//private var asset: AVAsset!
+	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
+		DispatchQueue.global().async {
+			let asset = AVURLAsset(url: url)
+			//let metadata = asset.commonMetadata
+			let availableMetaFormats = asset.availableMetadataFormats
+			for format in availableMetaFormats {
+				for item in asset.metadata(forFormat: format) {
+					if let commonKey = item.commonKey {
+						print("!!! \(commonKey.rawValue)")
+						if commonKey.rawValue == "title" {
+							DispatchQueue.main.async {
+								self.title = item.value as? String
+							}
+							continue
+						}
+						if commonKey.rawValue == "artist" {
+							DispatchQueue.main.async {
+								self.artist = item.value as? String
+							}
+							continue
+						}
+						if commonKey.rawValue == "albumName" {
+							DispatchQueue.main.async {
+								self.album = item.value as? String
+							}
+							continue
+						}
+						if commonKey.rawValue == "artwork" {
+							if let value = item.value {
+								if let data = value as? Data {
+									DispatchQueue.main.async {
+										self.image = UIImage(data: data)
+									}
+								}
+							}
+							continue
+						}
+					}
+				}
+			}
+			DispatchQueue.main.async {
+				handler()
+			}
+		}
+	}
 	public func openRemote(_ url: URL) {
 		isLocal = false
 		streamer.reset()
 		fileDownloaded = false
 		hasError = false
 		rangeHeader = false
-		self.url = url
-		asset = AVURLAsset(url: url)
-
-		let metadata = asset.commonMetadata
-		let availableMetaFormats = asset.availableMetadataFormats
-		for format in availableMetaFormats {
-
-			for item in asset.metadata(forFormat: format) {
-
-				if let commonKey = item.commonKey {
-					if commonKey.rawValue == "title" {
-						title = item.value as? String
-						//continue
-					}
-					if commonKey.rawValue == "artist" {
-						artist = item.value as? String
-						//continue
-					}
-					if commonKey.rawValue == "albumName" {
-						album = item.value as? String
-						//continue
-					}
-					if commonKey.rawValue == "artwork" {
-						if let value = item.value {
-							if let data = value as? Data {
-								let image = UIImage(data: data)
-								self.image = image
-							}
-						}
-						continue
-					}
-				}
-			}
+		handleMeta(url) {
+			self.url = url
 		}
 	}
 
@@ -223,7 +237,9 @@ open class SomePlayer: NSObject {
 		fileDownloaded = true
 		hasError = false
 		rangeHeader = false
-		self.url = url
+		handleMeta(url) {
+			self.url = url
+		}
 	}
 	
 	public func pause() {

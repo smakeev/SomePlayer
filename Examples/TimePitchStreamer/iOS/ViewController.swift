@@ -80,6 +80,11 @@ class ViewController: UIViewController {
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_5MG.mp3" // MG
 		let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
 
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_1MG.wav" //WAW
+		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_10MG.wav"
+
+		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
+
 		let url = URL(string: str)!
 		player.openRemote(url)
 
