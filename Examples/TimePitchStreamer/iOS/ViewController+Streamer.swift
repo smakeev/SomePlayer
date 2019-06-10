@@ -29,17 +29,19 @@ extension ViewController: SomePlayerDelegate {
 
 	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
 		//  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
-		//print("!!! total progress: \(progress), current: \(currentProgress)")
+
 		progressSlider.progress = progress
 	}
 
-	func player(_ player: SomePlayer, changedState state: StreamingState) {
+	func player(_ player: SomePlayer, changedState state: SomePlayer.PlayerState) {
 		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
 		switch state {
 		case .playing:
 			playButton.setImage(#imageLiteral(resourceName: "pause"), for: .normal)
-		case .paused, .stopped:
+		case .paused, .ended:
+			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
+		default:
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
 		}
 	}

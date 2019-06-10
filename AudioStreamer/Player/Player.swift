@@ -13,7 +13,7 @@ import UIKit
 public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL)
 	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
-	func player(_ player: SomePlayer, changedState state: StreamingState)
+	func player(_ player: SomePlayer, changedState state: SomePlayer.PlayerState)
 	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval)
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
 	func player(_ player: SomePlayer, savedSeconds: TimeInterval)
@@ -22,7 +22,17 @@ public protocol SomePlayerDelegate: class {
 
 
 open class SomePlayer: NSObject {
-	
+
+	public enum PlayerState: Int {
+		case undefined = 0
+		case initializing
+		case ready
+		case playing
+		case paused
+		case ended
+		case failed
+	}
+
 	public enum SilenceHandlingType {
 		case none
 		case smart
@@ -62,7 +72,16 @@ open class SomePlayer: NSObject {
 		}
 	}
 
-	public var duration:         TimeInterval{
+	public fileprivate(set) var state: PlayerState = .undefined {
+		didSet {
+			if state != oldValue {
+				self.delegate?.player(self, changedState: state)
+				print("!!! \(state)")
+			}
+		}
+	}
+
+	public var duration:         TimeInterval {
 		get {
 			return max(hasDuration, estimatedDuration)
 		}
@@ -79,12 +98,12 @@ open class SomePlayer: NSObject {
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0 {
 		didSet {
-			//print("!!! total: \(totalSize)")
+
 		}
 	}
 	public internal(set) var hasBytes:       Int64 = 0 {
 		didSet {
-			//print("!!! has bytes: \(hasBytes)")
+
 			if hasBytes > totalSize {
 				totalSize = hasBytes
 			}
@@ -95,7 +114,7 @@ open class SomePlayer: NSObject {
 			resumableData = nil
 			hasBytes = 0
 			delegate?.player(self, offsetChanged: offset)
-			//print("!!! offset \(offset) : \(Float(offset) / Float(totalSize))")
+
 		}
 	}
 	public internal(set) var hasError:       Bool = false
@@ -145,12 +164,6 @@ open class SomePlayer: NSObject {
 //    var audioLengthSamples: AVAudioFramePosition = 0
 //    var audioSampleRate: Float = 0
 
-	
-	public var state: StreamingState {
-		get {
-			return streamer.state
-		}
-	}
 
 	public private(set) var title: String? {
 		didSet {
@@ -176,6 +189,7 @@ open class SomePlayer: NSObject {
 
 	//private var asset: AVAsset!
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
+		self.state = .initializing
 		DispatchQueue.global().async {
 			let asset = AVURLAsset(url: url)
 			//let metadata = asset.commonMetadata
@@ -183,7 +197,7 @@ open class SomePlayer: NSObject {
 			for format in availableMetaFormats {
 				for item in asset.metadata(forFormat: format) {
 					if let commonKey = item.commonKey {
-						print("!!! \(commonKey.rawValue)")
+
 						if commonKey.rawValue == "title" {
 							DispatchQueue.main.async {
 								self.title = item.value as? String
@@ -217,6 +231,7 @@ open class SomePlayer: NSObject {
 			}
 			DispatchQueue.main.async {
 				handler()
+				self.state = .ready
 			}
 		}
 	}
@@ -401,7 +416,11 @@ open class SomePlayer: NSObject {
 }
 
 extension SomePlayer: StreamingDelegate {
-	
+
+	public func streamer(_ streamer: Streaming, fileFinished url: URL) {
+		self.state = .ended
+	}
+
 	private func setAveragePowerCh1(_ power: Float?) {
 		DispatchQueue.main.async {
 			self.averagePowerForChannel1 = power
@@ -448,7 +467,14 @@ extension SomePlayer: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
 		amplitudes = [Float]()
 		self.rate = self.baseRate
-		delegate?.player(self, changedState: state)
+		switch state {
+		case .paused:
+			self.state = .paused
+		case .playing:
+			self.state = .playing
+		case .stopped:
+			self.state = .ready
+		}
 		let mainMixer = streamer.engine.mainMixerNode
 		if state == .playing {
 			let bufferSize = streamer.readBufferSize

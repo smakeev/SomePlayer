@@ -378,23 +378,6 @@ open class Streamer: Streaming {
 		}
 	}
 	
-	fileprivate let kMinDb: Float = -35.0
-	
-	fileprivate func scaledPower(power: Float) -> Float {
-		// 1
-		guard power.isFinite else { return 0.0 }
-		
-		// 2
-		if power < kMinDb {
-			return 0.0
-		} else if power >= 1.0 {
-			return 1.0
-		} else {
-			// 3
-			return (abs(kMinDb) - abs(power)) / abs(kMinDb)
-		}
-	}
-	
 	// MARK: - Handling Time Updates
 	
 	/// Handles the duration value, explicitly checking if the duration is greater than the current value. For indeterminate streams we can accurately estimate the duration using the number of packets parsed and multiplying that by the number of frames per packet.
@@ -425,6 +408,10 @@ open class Streamer: Streaming {
 		if currentTime >= duration {
 			try? seek(to: 0)
 			pause()
+			//inform that file finished
+			if let url = self.url {
+				self.delegate?.streamer(self, fileFinished: url)
+			}
 		}
 	}
 	

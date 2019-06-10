@@ -11,7 +11,9 @@ import AVFoundation
 
 /// The `StreamingDelegate` provides an interface for responding to changes to a `Streaming` instance. These include whenever the streamer state changes, when the download progress changes, as well as the current time and duration changes.
 public protocol StreamingDelegate: class {
-	
+
+	func streamer(_ streamer: Streaming, fileFinished url: URL)
+
 	func streamer(_ streamer: Streaming, hasRangeHeader: Bool, totalSize: Int64)
 	
 	/// Triggered when the downloader fails
