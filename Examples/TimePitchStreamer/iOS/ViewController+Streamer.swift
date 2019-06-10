@@ -71,8 +71,8 @@ extension ViewController: SomePlayerDelegate {
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval) {
 		let formattedDuration = duration.toMMSS()
 		// os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
+		durationTimeLabel.text = formattedDuration
 		if player.fileDownloaded {
-			durationTimeLabel.text = formattedDuration
 			if !player.rangeHeader {
 				progressSlider.minimumValue = 0.0
 				progressSlider.maximumValue = Float(duration)

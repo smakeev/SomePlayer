@@ -92,7 +92,11 @@ open class SomePlayer: NSObject {
 
 		}
 	}
-	public internal(set) var estimatedDuration: TimeInterval = 0
+	public internal(set) var estimatedDuration: TimeInterval = 0 {
+		didSet {
+			self.delegate?.player(self, updatedDuration: self.duration)
+		}
+	}
 	
 	
 	public internal(set) var rangeHeader:    Bool  = false
@@ -187,7 +191,7 @@ open class SomePlayer: NSObject {
 	}
 
 
-	//private var asset: AVAsset!
+	private var asset: AVAsset?
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
 		self.state = .initializing
 		DispatchQueue.global().async {
@@ -230,6 +234,13 @@ open class SomePlayer: NSObject {
 				}
 			}
 			DispatchQueue.main.async {
+				self.estimatedDuration = TimeInterval(CMTimeGetSeconds(asset.duration))
+
+				if asset.providesPreciseDurationAndTiming {
+					self.asset = asset
+				} else {
+					self.asset = nil
+				}
 				handler()
 				self.state = .ready
 			}
@@ -532,7 +543,7 @@ extension SomePlayer: StreamingDelegate {
 	
 	public func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
 		hasDuration = duration
-		delegate?.player(self, updatedDuration: duration)
+		delegate?.player(self, updatedDuration: self.duration)
 	}
 	
 	public func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?) {
