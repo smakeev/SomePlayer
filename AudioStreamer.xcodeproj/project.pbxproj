@@ -75,6 +75,7 @@
 		B6137507229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B61FBB1B22A1B2D800B7D839 /* SomePlayerActionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */; };
 		B622B2AD22A30E2200842508 /* ResumableData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B622B2AC22A30E2200842508 /* ResumableData.swift */; };
+		B6AAEA9122AE8EDA0087D0EA /* ID3Parer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AAEA9022AE8EDA0087D0EA /* ID3Parer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,6 +123,7 @@
 		B6137504229F133E00694CF2 /* TimePitchStreamer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimePitchStreamer.swift; sourceTree = "<group>"; };
 		B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomePlayerActionView.swift; sourceTree = "<group>"; };
 		B622B2AC22A30E2200842508 /* ResumableData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumableData.swift; sourceTree = "<group>"; };
+		B6AAEA9022AE8EDA0087D0EA /* ID3Parer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ID3Parer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,6 +185,7 @@
 		66A1395B20013F860076B0E5 /* AudioStreamer */ = {
 			isa = PBXGroup;
 			children = (
+				B6AAEA8F22AE8EC50087D0EA /* ID3Parser */,
 				B6137503229F133E00694CF2 /* Common */,
 				B61374FD229F123400694CF2 /* Player */,
 				66A1397320013FAA0076B0E5 /* Download */,
@@ -269,6 +272,14 @@
 				B622B2AC22A30E2200842508 /* ResumableData.swift */,
 			);
 			path = Common;
+			sourceTree = "<group>";
+		};
+		B6AAEA8F22AE8EC50087D0EA /* ID3Parser */ = {
+			isa = PBXGroup;
+			children = (
+				B6AAEA9022AE8EDA0087D0EA /* ID3Parer.swift */,
+			);
+			path = ID3Parser;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -470,6 +481,7 @@
 				66A1DBBF20C71EDA00A29E34 /* Streamer.swift in Sources */,
 				66C835142001BEFA00E953C7 /* Reading.swift in Sources */,
 				66A1397B20013FAA0076B0E5 /* DownloadingDelegate.swift in Sources */,
+				B6AAEA9122AE8EDA0087D0EA /* ID3Parer.swift in Sources */,
 				66A139832001546D0076B0E5 /* DownloadingState.swift in Sources */,
 				B61FBB1B22A1B2D800B7D839 /* SomePlayerActionView.swift in Sources */,
 			);

@@ -62,6 +62,7 @@ open class SomePlayer: NSObject {
 				estimatedDuration = 0
 				return
 			}
+
 			let framesPerPacket = format.streamDescription.pointee.mFramesPerPacket
 			let bytesPerPacket = format.streamDescription.pointee.mBytesPerPacket
 			//let packets = totalSize / bytesPerPacket
@@ -76,7 +77,6 @@ open class SomePlayer: NSObject {
 		didSet {
 			if state != oldValue {
 				self.delegate?.player(self, changedState: state)
-				print("!!! \(state)")
 			}
 		}
 	}
@@ -102,7 +102,7 @@ open class SomePlayer: NSObject {
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0 {
 		didSet {
-
+			print("!!! TOtalSize: \(totalSize)")
 		}
 	}
 	public internal(set) var hasBytes:       Int64 = 0 {
@@ -192,9 +192,16 @@ open class SomePlayer: NSObject {
 
 
 	private var asset: AVAsset?
+	private var id3Parser: ID3Parser?
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
 		self.state = .initializing
 		DispatchQueue.global().async {
+			if self.id3Parser != nil {
+				self.id3Parser?.cancel()
+			}
+			self.id3Parser = ID3Parser(url)
+			self.id3Parser?.parse()
+
 			let asset = AVURLAsset(url: url)
 			//let metadata = asset.commonMetadata
 			let availableMetaFormats = asset.availableMetadataFormats
@@ -235,12 +242,28 @@ open class SomePlayer: NSObject {
 			}
 			DispatchQueue.main.async {
 				self.estimatedDuration = TimeInterval(CMTimeGetSeconds(asset.duration))
+//				for track in asset.tracks(withMediaType: AVMediaType.audio) {
 
-				if asset.providesPreciseDurationAndTiming {
-					self.asset = asset
-				} else {
-					self.asset = nil
-				}
+//					let formatDescrptions = track.formatDescriptions
+//					if formatDescrptions.count > 0 {
+//						formatDescription = formatDescrptions[0]
+//						print("!!! desc: \(formatDescription)
+//					}
+//					print("!!! track.estimatedDataRate \(track.estimatedDataRate)")
+//					print("!!! track.totalSampleDataLength \(track.totalSampleDataLength)")
+//					print("!!! track.naturalSize \(track.naturalSize)")
+//					print("!!! track.minFrameDuration \(track.minFrameDuration)")
+
+//					for segment in track.segments {
+//						print("!!! \(segment.timeMapping)")
+//					}
+//				}
+//				print("!!! \(self.estimatedDuration)")
+//				if asset.providesPreciseDurationAndTiming {
+//					self.asset = asset
+//				} else {
+//					self.asset = nil
+//				}
 				handler()
 				self.state = .ready
 			}
