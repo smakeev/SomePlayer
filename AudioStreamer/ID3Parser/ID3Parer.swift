@@ -67,12 +67,23 @@ extension ID3Parser {
 		task = session.dataTask(with: request)
 	}
 
-	fileprivate func readSynchsafeInt(synch:Int32) -> Int32
-{
-	return (synch & 127) + 128 * ((synch >> 8) & 127) + 16384 * ((synch >> 16) & 127) + 2097152 * ((synch >> 24) & 127)
+	fileprivate func unsynchsafe(_ inP: Int32) -> Int32 {
+		var outP: Int32 = 0
+		var mask: Int32 = 0x7F000000
+
+		while mask > 0 {
+			outP >>= 1
+			outP |= inP & mask
+			mask >>= 8
+		}
+
+		return outP
 	}
 
 }
+
+
+// biteOffset = <ID3V2 size> + (<seconds> * <bitrate> * 8)
 
 extension ID3Parser: URLSessionDataDelegate {
 
@@ -100,13 +111,19 @@ extension ID3Parser: URLSessionDataDelegate {
 		}
 		version = tagVersion
 		// Get the ID3 tag size and flags
-		let sizeData = data[6...9]
-		let number = sizeData.withUnsafeBytes {
-			(pointer: UnsafePointer<Int32>) -> Int32 in
-			return pointer.pointee
-		}
-		headerSize = Int64(readSynchsafeInt(synch: number))
-		print("!!! \(headerSize)")
+		var sizeData = Data()
+		sizeData.append(data[9])
+		sizeData.append(data[8])
+		sizeData.append(data[7])
+		sizeData.append(data[6])
+
+		let sData = sizeData as NSData
+		var num: Int32 = 0
+		sData.getBytes(&num, length: MemoryLayout<Int32>.size)
+		print("!!! \(num)")
+
+		headerSize = Int64(unsynchsafe(num))
+		print("!!! \(unsynchsafe(num))")
 
 		var uses_synch = (data[5] & 0x80) != 0 ? true : false;
 		var has_extended_hdr = (data[5] & 0x40) != 0 ? true : false;
