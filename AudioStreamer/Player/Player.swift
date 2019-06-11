@@ -18,6 +18,10 @@ public protocol SomePlayerDelegate: class {
 	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
 	func player(_ player: SomePlayer, savedSeconds: TimeInterval)
 	func player(_ player: SomePlayer, offsetChanged offset: Int64)
+	func player(_ player: SomePlayer, changedImage image: UIImage)
+	func player(_ player: SomePlayer, changedTitle title: String)
+	func player(_ player: SomePlayer, changedArtist artist: String)
+	func player(_ player: SomePlayer, changedAlbum album: String)
 }
 
 
@@ -102,7 +106,7 @@ open class SomePlayer: NSObject {
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0 {
 		didSet {
-			print("!!! TOtalSize: \(totalSize)")
+
 		}
 	}
 	public internal(set) var hasBytes:       Int64 = 0 {
@@ -171,27 +175,31 @@ open class SomePlayer: NSObject {
 
 	public private(set) var title: String? {
 		didSet {
-
+			guard let validTitle = title else { return }
+			delegate?.player(self, changedTitle: validTitle)
 		}
 	}
 	public private(set) var artist: String? {
 		didSet {
-			
+			guard let validArtist = artist else { return }
+			delegate?.player(self, changedArtist: validArtist)
 		}
 	}
 	public private(set) var album: String? {
 		didSet {
-
+			guard let validAlbum = album else { return }
+			delegate?.player(self, changedAlbum: validAlbum)
 		}
 	}
 	public private(set) var image: UIImage? {
 		didSet {
-
+			guard let validImage = image else { return }
+			delegate?.player(self, changedImage: validImage)
 		}
 	}
 
 
-	private var asset: AVAsset?
+	
 	private var id3Parser: ID3Parser?
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
 		self.state = .initializing
@@ -200,75 +208,56 @@ open class SomePlayer: NSObject {
 				self.id3Parser?.cancel()
 			}
 			self.id3Parser = ID3Parser(url)
-			self.id3Parser?.parse()
-
-			let asset = AVURLAsset(url: url)
-			//let metadata = asset.commonMetadata
-			let availableMetaFormats = asset.availableMetadataFormats
-			for format in availableMetaFormats {
-				for item in asset.metadata(forFormat: format) {
-					if let commonKey = item.commonKey {
-
-						if commonKey.rawValue == "title" {
-							DispatchQueue.main.async {
-								self.title = item.value as? String
-							}
-							continue
-						}
-						if commonKey.rawValue == "artist" {
-							DispatchQueue.main.async {
-								self.artist = item.value as? String
-							}
-							continue
-						}
-						if commonKey.rawValue == "albumName" {
-							DispatchQueue.main.async {
-								self.album = item.value as? String
-							}
-							continue
-						}
-						if commonKey.rawValue == "artwork" {
-							if let value = item.value {
-								if let data = value as? Data {
+			self.id3Parser?.parse { asset in
+				if let asset = asset {
+					let availableMetaFormats = asset.availableMetadataFormats
+					for format in availableMetaFormats {
+						for item in asset.metadata(forFormat: format) {
+							if let commonKey = item.commonKey {
+								
+								if commonKey.rawValue == "title" {
 									DispatchQueue.main.async {
-										self.image = UIImage(data: data)
+										self.title = item.value as? String
 									}
+									continue
+								}
+								if commonKey.rawValue == "artist" {
+									DispatchQueue.main.async {
+										self.artist = item.value as? String
+									}
+									continue
+								}
+								if commonKey.rawValue == "albumName" {
+									DispatchQueue.main.async {
+										self.album = item.value as? String
+									}
+									continue
+								}
+								if commonKey.rawValue == "artwork" {
+									if let value = item.value {
+										if let data = value as? Data {
+											DispatchQueue.main.async {
+												self.image = UIImage(data: data)
+											}
+										}
+									}
+									continue
 								}
 							}
-							continue
 						}
 					}
 				}
-			}
-			DispatchQueue.main.async {
-				self.estimatedDuration = TimeInterval(CMTimeGetSeconds(asset.duration))
-//				for track in asset.tracks(withMediaType: AVMediaType.audio) {
-
-//					let formatDescrptions = track.formatDescriptions
-//					if formatDescrptions.count > 0 {
-//						formatDescription = formatDescrptions[0]
-//						print("!!! desc: \(formatDescription)
-//					}
-//					print("!!! track.estimatedDataRate \(track.estimatedDataRate)")
-//					print("!!! track.totalSampleDataLength \(track.totalSampleDataLength)")
-//					print("!!! track.naturalSize \(track.naturalSize)")
-//					print("!!! track.minFrameDuration \(track.minFrameDuration)")
-
-//					for segment in track.segments {
-//						print("!!! \(segment.timeMapping)")
-//					}
-//				}
-//				print("!!! \(self.estimatedDuration)")
-//				if asset.providesPreciseDurationAndTiming {
-//					self.asset = asset
-//				} else {
-//					self.asset = nil
-//				}
-				handler()
-				self.state = .ready
+				DispatchQueue.main.async {
+					if let validAsset = asset {
+						self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
+					}
+					handler()
+					self.state = .ready
+				}
 			}
 		}
 	}
+	
 	public func openRemote(_ url: URL) {
 		isLocal = false
 		streamer.reset()

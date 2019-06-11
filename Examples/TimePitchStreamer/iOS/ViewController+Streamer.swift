@@ -12,6 +12,22 @@ import os.log
 import UIKit
 
 extension ViewController: SomePlayerDelegate {
+	func player(_ player: SomePlayer, changedImage image: UIImage) {
+		imageView.image = image
+	}
+	
+	func player(_ player: SomePlayer, changedTitle title: String) {
+		//do nothing
+	}
+	
+	func player(_ player: SomePlayer, changedArtist artist: String) {
+		artistLabel.text = artist
+	}
+	
+	func player(_ player: SomePlayer, changedAlbum album: String) {
+		//do nothing
+	}
+	
 
 	func player(_ player: SomePlayer, offsetChanged offset: Int64) {
 		progressSlider.offset = Float(offset) / Float(player.totalSize)

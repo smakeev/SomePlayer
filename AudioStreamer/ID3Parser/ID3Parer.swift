@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AVFoundation
 
 public class ID3Parser: NSObject {
 	var inParsing: Bool = false
@@ -16,6 +17,8 @@ public class ID3Parser: NSObject {
 			//inform with result
 		}
 	}
+	
+	var asset: AVAsset?
 
 	var version: UInt8?
 	var getVersion: String? { return version == nil ? nil : String("2.\(version)") }
@@ -26,8 +29,14 @@ public class ID3Parser: NSObject {
 		self.url = url
 	}
 
-	func parse() {
+	private var handler: ((AVAsset?) -> Void)?
+	func parse( handler: @escaping (AVAsset?) -> Void) {
 		guard inParsing == false else { return }
+		self.handler = handler
+		DispatchQueue.global().async {
+			let asset = AVURLAsset(url: self.url)
+			self.handler?(asset)
+		}
 		prepare()
 		start()
 	}

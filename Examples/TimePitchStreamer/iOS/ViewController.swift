@@ -30,6 +30,8 @@ class ViewController: UIViewController {
 	@IBOutlet weak var pitchSlider: UISlider!
 	@IBOutlet weak var playButton: UIButton!
 	@IBOutlet weak var progressSlider: ProgressSlider!
+	@IBOutlet weak var imageView: UIImageView!
+	@IBOutlet weak var artistLabel: UILabel!
 	
 	var savedSeconds: Double = 0 {
 		didSet {
