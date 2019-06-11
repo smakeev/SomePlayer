@@ -524,7 +524,8 @@ extension SomePlayer: StreamingDelegate {
 						let channelDataValueArray = stride(from: 0,
 														   to: Int(buffer.frameLength),
 														   by: buffer.stride).map{ channelDataValue[$0] }
-						let rms = sqrt(channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
+						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+						let rms = sqrt(part)
 						self.setAveragePowerCh0(20 * log10(rms))
 						
 					} else {
@@ -545,7 +546,8 @@ extension SomePlayer: StreamingDelegate {
 						let channelDataValueArray = stride(from: 0,
 														   to: Int(buffer.frameLength),
 														   by: buffer.stride).map{ channelDataValue[$0] }
-						let rms = sqrt(channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
+						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+						let rms = sqrt(part)
 						self.setAveragePowerCh1(20 * log10(rms))
 						
 					} else {
