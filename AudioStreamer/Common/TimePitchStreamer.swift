@@ -43,7 +43,7 @@ public class TimePitchStreamer: Streamer {
     }
     
     override public func connectNodes() {
-        engine.connect(playerNode, to: timePitchNode, format: readFormat)
+        engine.connect(playerEngineNode, to: timePitchNode, format: readFormat)
         engine.connect(timePitchNode, to: engine.mainMixerNode, format: readFormat)
     }
     

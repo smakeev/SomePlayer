@@ -15,8 +15,8 @@ class ViewController: UIViewController {
 	static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "ViewController")
 	
 	// UI props
-	@IBOutlet weak var smartSpeedBtn: SomePlayerActionView!
-	@IBOutlet weak var speedUpBtn: SomePlayerActionView!
+	@IBOutlet weak var smartSpeedBtn: SomeplayerEngineActionView!
+	@IBOutlet weak var speedUpBtn: SomeplayerEngineActionView!
 	
 	@IBOutlet weak var smartSpeedLabel: UILabel!
 	@IBOutlet weak var speedUpLabel: UILabel!
@@ -40,10 +40,10 @@ class ViewController: UIViewController {
 		}
 	}
 	// Streamer props
-	lazy var player: SomePlayer = {
-		let player = SomePlayer()
-		player.delegate = self
-		return player
+	lazy var playerEngine: SomePlayerEngine = {
+		let playerEngine = SomePlayerEngine()
+		playerEngine.delegate = self
+		return playerEngine
 	}()
 	
 	// Used so we can use the current time slider continuously, but only seek when the user touches up
@@ -72,7 +72,7 @@ class ViewController: UIViewController {
 
 	//Local file
 //		let audioFileURL = Bundle.main.url(forResource: "file_example_MP3_2MG", withExtension: "mp3")
-//		player.openLocal(audioFileURL!)
+//		playerEngine.openLocal(audioFileURL!)
 
 	//Remote file
 		//let str = "https://applehosted.podcasts.apple.com/apple_keynotes/2019/190603_SD.mp4"
@@ -94,14 +94,14 @@ class ViewController: UIViewController {
 		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
 
 		let url = URL(string: str)!
-		player.openRemote(url)
+		playerEngine.openRemote(url)
 
-		player.addRateObserver(withId: "controller") { value in
+		playerEngine.addRateObserver(withId: "controller") { value in
 			self.smartSpeedLabel.text = "\(value)"
 		}
 		smartSpeedBtn.action = { [unowned self] btn in
-			if self.player.silenceHandlingType == .smart {
-				self.player.silenceHandlingType = .none
+			if self.playerEngine.silenceHandlingType == .smart {
+				self.playerEngine.silenceHandlingType = .none
 				btn.backgroundColor = .lightGray
 				self.smartSpeedLabel.textColor = .black
 				self.speedUpLabel.textColor = .black
@@ -109,7 +109,7 @@ class ViewController: UIViewController {
 				self.speedUpMainLabel.textColor = .black
 				return
 			}
-			self.player.silenceHandlingType = .smart
+			self.playerEngine.silenceHandlingType = .smart
 			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
 			self.smartSpeedLabel.textColor = .white
 			self.speedUpLabel.textColor = .black
@@ -121,8 +121,8 @@ class ViewController: UIViewController {
 		}
 		
 		speedUpBtn.action = { btn in
-			if self.player.silenceHandlingType == .speedUp {
-				self.player.silenceHandlingType = .none
+			if self.playerEngine.silenceHandlingType == .speedUp {
+				self.playerEngine.silenceHandlingType = .none
 				btn.backgroundColor = .lightGray
 				self.smartSpeedLabel.textColor = .black
 				self.speedUpLabel.textColor = .black
@@ -130,7 +130,7 @@ class ViewController: UIViewController {
 				self.speedUpMainLabel.textColor = .black
 				return
 			}
-			self.player.silenceHandlingType = .speedUp
+			self.playerEngine.silenceHandlingType = .speedUp
 			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
 			self.smartSpeedBtn.backgroundColor = .lightGray
 			self.smartSpeedLabel.textColor = .black
@@ -157,11 +157,11 @@ class ViewController: UIViewController {
 	@IBAction func togglePlayback(_ sender: UIButton) {
 		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		
-		if player.state == .playing {
-			player.pause()
+		if playerEngine.state == .playing {
+			playerEngine.pause()
 			
 		} else {
-			player.play()
+			playerEngine.play()
 		}
 	}
 	
@@ -169,12 +169,12 @@ class ViewController: UIViewController {
 	
 	@IBAction func seek(_ sender: UISlider) {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
-		if !player.rangeHeader {
+		if !playerEngine.rangeHeader {
 			let time = TimeInterval(progressSlider.value)
-			player.seek(to: time)
+			playerEngine.seek(to: time)
 		} else {
 			let percent = progressSlider.value / progressSlider.maximumValue
-			player.seekPercently(to: percent)
+			playerEngine.seekPercently(to: percent)
 		}
 	}
 	
@@ -186,12 +186,12 @@ class ViewController: UIViewController {
 	
 	@IBAction func progressSliderValueChanged(_ sender: UISlider) {
 		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
-		if player.fileDownloaded {
-			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * player.hasDuration
+		if playerEngine.fileDownloaded {
+			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * playerEngine.hasDuration
 			currentTimeLabel.text = currentTime.toMMSS()
 		} else {
 			guard progressSlider.maximumValue != 0 else { return }
-			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * player.duration
+			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * playerEngine.duration
 			print("!!! \(progressSlider.maximumValue)")
 			currentTimeLabel.text = currentTime.toMMSS()
 		}
@@ -213,7 +213,7 @@ class ViewController: UIViewController {
 		var pitch = roundf(pitchSlider.value)
 		let newStep = roundf(pitch / step)
 		pitch = newStep * step
-		player.pitch = pitch
+		playerEngine.pitch = pitch
 		pitchSlider.value = pitch
 		pitchLabel.text = String(format: "%i cents", Int(pitch))
 	}
@@ -222,7 +222,7 @@ class ViewController: UIViewController {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
 		
 		let pitch: Float = 0
-		player.pitch = pitch
+		playerEngine.pitch = pitch
 		pitchLabel.text = String(format: "%i cents", Int(pitch))
 		pitchSlider.value = pitch
 	}
@@ -236,7 +236,7 @@ class ViewController: UIViewController {
 		var rate = rateSlider.value
 		let newStep = roundf(rate / step)
 		rate = newStep * step
-		player.baseRate = rate
+		playerEngine.baseRate = rate
 		rateSlider.value = rate
 		rateLabel.text = String(format: "%.2fx", rate)
 	}
@@ -245,7 +245,7 @@ class ViewController: UIViewController {
 		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
 		
 		let rate: Float = 1
-		player.baseRate = rate
+		playerEngine.baseRate = rate
 		rateLabel.text = String(format: "%.2fx", rate)
 		rateSlider.value = rate
 	}

@@ -1,5 +1,5 @@
 //
-//  Player.swift
+//  PlayerEngine.swift
 //  AudioStreamer
 //
 //  Created by Sergey Makeev on 29/05/2019.
@@ -10,24 +10,24 @@ import Foundation
 import AVFoundation
 import UIKit
 
-public protocol SomePlayerDelegate: class {
-	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL)
-	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
-	func player(_ player: SomePlayer, changedState state: SomePlayer.PlayerState)
-	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval)
-	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval)
-	func player(_ player: SomePlayer, savedSeconds: TimeInterval)
-	func player(_ player: SomePlayer, offsetChanged offset: Int64)
-	func player(_ player: SomePlayer, changedImage image: UIImage)
-	func player(_ player: SomePlayer, changedTitle title: String)
-	func player(_ player: SomePlayer, changedArtist artist: String)
-	func player(_ player: SomePlayer, changedAlbum album: String)
+public protocol SomeplayerEngineDelegate: class {
+	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL)
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.playerEngineState)
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval)
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDuration duration: TimeInterval)
+	func playerEngine(_ playerEngine: SomePlayerEngine, savedSeconds: TimeInterval)
+	func playerEngine(_ playerEngine: SomePlayerEngine, offsetChanged offset: Int64)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedImage image: UIImage)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedTitle title: String)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedArtist artist: String)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String)
 }
 
 
-open class SomePlayer: NSObject {
+open class SomePlayerEngine: NSObject {
 
-	public enum PlayerState: Int {
+	public enum playerEngineState: Int {
 		case undefined = 0
 		case initializing
 		case ready
@@ -77,10 +77,10 @@ open class SomePlayer: NSObject {
 		}
 	}
 
-	public fileprivate(set) var state: PlayerState = .undefined {
+	public fileprivate(set) var state: playerEngineState = .undefined {
 		didSet {
 			if state != oldValue {
-				self.delegate?.player(self, changedState: state)
+				self.delegate?.playerEngine(self, changedState: state)
 			}
 		}
 	}
@@ -98,7 +98,7 @@ open class SomePlayer: NSObject {
 	}
 	public internal(set) var estimatedDuration: TimeInterval = 0 {
 		didSet {
-			self.delegate?.player(self, updatedDuration: self.duration)
+			self.delegate?.playerEngine(self, updatedDuration: self.duration)
 		}
 	}
 	
@@ -127,7 +127,7 @@ open class SomePlayer: NSObject {
 		didSet {
 			resumableData = nil
 			hasBytes = 0
-			delegate?.player(self, offsetChanged: offset)
+			delegate?.playerEngine(self, offsetChanged: offset)
 			if aboutBitrate != 0 && offset != 0 {
 				timeOffset = Double((offset - headerSize) * 8) / aboutBitrate
 				print("!!! offset: \(offset)")
@@ -164,7 +164,7 @@ open class SomePlayer: NSObject {
 		}
 	}
 	
-	weak public var delegate: SomePlayerDelegate? = nil
+	weak public var delegate: SomeplayerEngineDelegate? = nil
 	
 	lazy public internal(set) var streamer: TimePitchStreamer = {
 		let streamer = TimePitchStreamer()
@@ -193,25 +193,25 @@ open class SomePlayer: NSObject {
 	public private(set) var title: String? {
 		didSet {
 			guard let validTitle = title else { return }
-			delegate?.player(self, changedTitle: validTitle)
+			delegate?.playerEngine(self, changedTitle: validTitle)
 		}
 	}
 	public private(set) var artist: String? {
 		didSet {
 			guard let validArtist = artist else { return }
-			delegate?.player(self, changedArtist: validArtist)
+			delegate?.playerEngine(self, changedArtist: validArtist)
 		}
 	}
 	public private(set) var album: String? {
 		didSet {
 			guard let validAlbum = album else { return }
-			delegate?.player(self, changedAlbum: validAlbum)
+			delegate?.playerEngine(self, changedAlbum: validAlbum)
 		}
 	}
 	public private(set) var image: UIImage? {
 		didSet {
 			guard let validImage = image else { return }
-			delegate?.player(self, changedImage: validImage)
+			delegate?.playerEngine(self, changedImage: validImage)
 		}
 	}
 
@@ -409,7 +409,7 @@ open class SomePlayer: NSObject {
 			if let validSampleRate = self.sampleRate {
 			 	let interval:Double = Double(1 / (validSampleRate / Double(streamer.readBufferSize)))
 				let savedSeconds: Double = Double(interval - (interval / Double(self.rate)))
-				self.delegate?.player(self, savedSeconds: savedSeconds)
+				self.delegate?.playerEngine(self, savedSeconds: savedSeconds)
 			}
 		}
 		
@@ -458,7 +458,7 @@ open class SomePlayer: NSObject {
 	
 }
 
-extension SomePlayer: StreamingDelegate {
+extension SomePlayerEngine: StreamingDelegate {
 
 	public func streamer(_ streamer: Streaming, fileFinished url: URL) {
 		self.state = .ended
@@ -483,16 +483,16 @@ extension SomePlayer: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, hasRangeHeader: Bool, totalSize: Int64) {
-        if self.totalSize < totalSize {
-            self.totalSize = totalSize
-        }
+		if self.totalSize < totalSize {
+			self.totalSize = totalSize
+		}
 		self.rangeHeader = hasRangeHeader
 	}
 	
 	public func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL, readyData bytes: Int64, response: URLResponse) {
 		hasError = true
 		resumableData = ResumableData(offset: offset, response: response, readyData: bytes)
-		delegate?.player(self, failedDownloadWithError: error, forURL: url)
+		delegate?.playerEngine(self, failedDownloadWithError: error, forURL: url)
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
@@ -503,8 +503,8 @@ extension SomePlayer: StreamingDelegate {
 			fileDownloaded = true
 		}
 		let totalProgress = Float(hasBytes) / Float(totalSize)
-		delegate?.player(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
-		delegate?.player(self, updatedDuration: duration)
+		delegate?.playerEngine(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
+		delegate?.playerEngine(self, updatedDuration: duration)
 	}
 	
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
@@ -572,12 +572,12 @@ extension SomePlayer: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
-		delegate?.player(self, updatedCurrentTime: currentTime)
+		delegate?.playerEngine(self, updatedCurrentTime: currentTime)
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
 		hasDuration = duration
-		delegate?.player(self, updatedDuration: self.duration)
+		delegate?.playerEngine(self, updatedDuration: self.duration)
 	}
 	
 	public func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?) {

@@ -1,5 +1,5 @@
 //
-//  SomePlayerActionView.swift
+//  SomeplayerEngineActionView.swift
 //  AudioStreamer-iOS
 //
 //  Created by Sergey Makeev on 31/05/2019.
@@ -9,9 +9,9 @@
 import UIKit
 import Foundation
 
-public class SomePlayerActionView: UIView {
+public class SomeplayerEngineActionView: UIView {
 
-	public var action: ((SomePlayerActionView) -> Void)? = nil
+	public var action: ((SomeplayerEngineActionView) -> Void)? = nil
 	
 	internal var oldBGColor: UIColor!
 	

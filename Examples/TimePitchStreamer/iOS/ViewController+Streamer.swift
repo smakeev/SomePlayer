@@ -11,29 +11,29 @@ import AudioStreamer
 import os.log
 import UIKit
 
-extension ViewController: SomePlayerDelegate {
-	func player(_ player: SomePlayer, changedImage image: UIImage) {
+extension ViewController: SomeplayerEngineDelegate {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedImage image: UIImage) {
 		imageView.image = image
 	}
 	
-	func player(_ player: SomePlayer, changedTitle title: String) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedTitle title: String) {
 		//do nothing
 	}
 	
-	func player(_ player: SomePlayer, changedArtist artist: String) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedArtist artist: String) {
 		artistLabel.text = artist
 	}
 	
-	func player(_ player: SomePlayer, changedAlbum album: String) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String) {
 		//do nothing
 	}
 	
 
-	func player(_ player: SomePlayer, offsetChanged offset: Int64) {
-		progressSlider.offset = Float(offset) / Float(player.totalSize)
+	func playerEngine(_ playerEngine: SomePlayerEngine, offsetChanged offset: Int64) {
+		progressSlider.offset = Float(offset) / Float(playerEngine.totalSize)
 	}
 
-	func player(_ player: SomePlayer, failedDownloadWithError error: Error, forURL url: URL) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL) {
 		// os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
 
 		let alert = UIAlertController(title: "Download Failed", message: error.localizedDescription, preferredStyle: .alert)
@@ -43,13 +43,13 @@ extension ViewController: SomePlayerDelegate {
 		show(alert, sender: self)
 	}
 
-	func player(_ player: SomePlayer, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
 		//  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
 
 		progressSlider.progress = progress
 	}
 
-	func player(_ player: SomePlayer, changedState state: SomePlayer.PlayerState) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.playerEngineState) {
 		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
 		switch state {
@@ -62,42 +62,42 @@ extension ViewController: SomePlayerDelegate {
 		}
 	}
 
-	func player(_ player: SomePlayer, updatedCurrentTime currentTime: TimeInterval) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval) {
 		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
 
 		if !isSeeking {
-			if !player.rangeHeader {
+			if !playerEngine.rangeHeader {
 				progressSlider.value = Float(currentTime)
 			}
-			currentTimeLabel.text = (player.timeOffset + currentTime).toMMSS()
-			if player.fileDownloaded {
-				if player.rangeHeader {
-					progressSlider.value = Float(currentTime / player.hasDuration) * Float(player.totalSize)
+			currentTimeLabel.text = (playerEngine.timeOffset + currentTime).toMMSS()
+			if playerEngine.fileDownloaded {
+				if playerEngine.rangeHeader {
+					progressSlider.value = Float(currentTime / playerEngine.hasDuration) * Float(playerEngine.totalSize)
 				} else {
 					progressSlider.value = Float(currentTime)
 				}
 			} else {
-				let currentPercentOfDownloadedData = Float(currentTime / player.hasDuration)
-				let currentByte = Float(player.hasBytes) * currentPercentOfDownloadedData
-				progressSlider.value = Float(player.offset) + currentByte
+				let currentPercentOfDownloadedData = Float(currentTime / playerEngine.hasDuration)
+				let currentByte = Float(playerEngine.hasBytes) * currentPercentOfDownloadedData
+				progressSlider.value = Float(playerEngine.offset) + currentByte
 			}
 		}
 	}
 
-	func player(_ player: SomePlayer, updatedDuration duration: TimeInterval) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDuration duration: TimeInterval) {
 		let formattedDuration = duration.toMMSS()
 		// os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
 		durationTimeLabel.text = formattedDuration
-		if player.fileDownloaded {
-			if !player.rangeHeader {
+		if playerEngine.fileDownloaded {
+			if !playerEngine.rangeHeader {
 				progressSlider.minimumValue = 0.0
 				progressSlider.maximumValue = Float(duration)
 			}
 		} else {
-			if !player.rangeHeader {
-				progressSlider.maximumValue = Float(player.hasDuration)
+			if !playerEngine.rangeHeader {
+				progressSlider.maximumValue = Float(playerEngine.hasDuration)
 			} else {
-				progressSlider.maximumValue = Float(player.totalSize)
+				progressSlider.maximumValue = Float(playerEngine.totalSize)
 			}
 		}
 
@@ -106,7 +106,7 @@ extension ViewController: SomePlayerDelegate {
 		progressSlider.isEnabled = true
 	}
 	
-	func player(_ player: SomePlayer, savedSeconds: TimeInterval) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, savedSeconds: TimeInterval) {
 		self.savedSeconds += savedSeconds
 	}
 }

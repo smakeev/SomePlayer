@@ -17,8 +17,8 @@ open class Streamer: Streaming {
 	// MARK: - Properties (Streaming)
 	
 	public var currentTime: TimeInterval? {
-		guard let nodeTime = playerNode.lastRenderTime,
-			let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
+		guard let nodeTime = playerEngineNode.lastRenderTime,
+			let playerTime = playerEngineNode.playerTime(forNodeTime: nodeTime) else {
 				return currentTimeOffset
 		}
 		let currentTime = TimeInterval(playerTime.sampleTime) / playerTime.sampleRate
@@ -34,7 +34,7 @@ open class Streamer: Streaming {
 	public internal(set) var parser: Parsing?
 	public internal(set) var reader: Reading?
 	public let engine = AVAudioEngine()
-	public let playerNode = AVAudioPlayerNode()
+	public let playerEngineNode = AVAudioPlayerNode()
 	public internal(set) var state: StreamingState = .stopped {
 		didSet {
 			delegate?.streamer(self, changedState: state)
@@ -75,7 +75,7 @@ open class Streamer: Streaming {
 	/// A `TimeInterval` used to calculate the current play time relative to a seek operation.
 	var currentTimeOffset: TimeInterval = 0
 	
-	/// A `Bool` indicating whether the file has been completely scheduled into the player node.
+	/// A `Bool` indicating whether the file has been completely scheduled into the playerEngine node.
 	var isFileSchedulingComplete = false
 	
 	// MARK: - Lifecycle
@@ -117,14 +117,14 @@ open class Streamer: Streaming {
 		RunLoop.current.add(timer, forMode: .common)
 	}
 	
-	/// Subclass can override this to attach additional nodes to the engine before it is prepared. Default implementation attaches the `playerNode`. Subclass should call super or be sure to attach the playerNode.
+	/// Subclass can override this to attach additional nodes to the engine before it is prepared. Default implementation attaches the `playerEngineNode`. Subclass should call super or be sure to attach the playerEngineNode.
 	open func attachNodes() {
-		engine.attach(playerNode)
+		engine.attach(playerEngineNode)
 	}
 	
-	/// Subclass can override this to make custom node connections in the engine before it is prepared. Default implementation connects the playerNode to the mainMixerNode on the `AVAudioEngine` using the default `readFormat`. Subclass should use the `readFormat` property when connecting nodes.
+	/// Subclass can override this to make custom node connections in the engine before it is prepared. Default implementation connects the playerEngineNode to the mainMixerNode on the `AVAudioEngine` using the default `readFormat`. Subclass should use the `readFormat` property when connecting nodes.
 	open func connectNodes() {
-		engine.connect(playerNode, to: engine.mainMixerNode, format: readFormat)
+		engine.connect(playerEngineNode, to: engine.mainMixerNode, format: readFormat)
 	}
 	
 	// MARK: - Reset
@@ -159,7 +159,7 @@ open class Streamer: Streaming {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Check we're not already playing
-		guard !playerNode.isPlaying else {
+		guard !playerEngineNode.isPlaying else {
 			return
 		}
 		
@@ -175,8 +175,8 @@ open class Streamer: Streaming {
 		let lastVolume = volumeRampTargetValue ?? volume
 		volume = 0
 		
-		// Start playback on the player node
-		playerNode.play()
+		// Start playback on the playerEngine node
+		playerEngineNode.play()
 		
 		// After 250ms we restore the volume to where it was
 		swellVolume(to: lastVolume)
@@ -188,13 +188,13 @@ open class Streamer: Streaming {
 	public func pause() {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
-		// Check if the player node is playing
-		guard playerNode.isPlaying else {
+		// Check if the playerEngine node is playing
+		guard playerEngineNode.isPlaying else {
 			return
 		}
 		
-		// Pause the player node and the engine
-		playerNode.pause()
+		// Pause the playerEngine node and the engine
+		playerEngineNode.pause()
 		
 		// Update the state
 		state = .paused
@@ -203,9 +203,9 @@ open class Streamer: Streaming {
 	public func stop() {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
-		// Stop the downloader, the player node, and the engine
+		// Stop the downloader, the playerEngine node, and the engine
 		downloader.stop()
-		playerNode.stop()
+		playerEngineNode.stop()
 		engine.stop()
 		
 		// Update the state
@@ -216,26 +216,26 @@ open class Streamer: Streaming {
 	var currentPosition: AVAudioFramePosition = 0
 	private func seekLocal(to time: TimeInterval) {
 		guard let audioFile = audioFile else { return }
-		let isPlaying = playerNode.isPlaying
+		let isPlaying = playerEngineNode.isPlaying
 		let lastVolume = volumeRampTargetValue ?? volume
 		seekFrame = AVAudioFramePosition(Float(time) * audioSampleRate)
 		seekFrame = max(seekFrame, 0)
 		seekFrame = min(seekFrame, audioLengthSamples)
 		currentPosition = seekFrame
-		playerNode.stop()
+		playerEngineNode.stop()
 		volume = 0
 
 		if currentPosition < audioLengthSamples {
 			currentTimeOffset = time
 			isFileSchedulingComplete = false
 
-			playerNode.scheduleSegment(audioFile, startingFrame: seekFrame, frameCount: AVAudioFrameCount(audioLengthSamples - seekFrame), at: nil) { [weak self] in
+			playerEngineNode.scheduleSegment(audioFile, startingFrame: seekFrame, frameCount: AVAudioFrameCount(audioLengthSamples - seekFrame), at: nil) { [weak self] in
 					self?.isFileSchedulingComplete = true
 			}
 		}
 
 		if isPlaying {
-			playerNode.play()
+			playerEngineNode.play()
 		}
 
 		// Update the current time
@@ -266,12 +266,12 @@ open class Streamer: Streaming {
 		currentTimeOffset = time
 		isFileSchedulingComplete = false
 		
-		// We need to store whether or not the player node is currently playing to properly resume playback after
-		let isPlaying = playerNode.isPlaying
+		// We need to store whether or not the playerEngine node is currently playing to properly resume playback after
+		let isPlaying = playerEngineNode.isPlaying
 		let lastVolume = volumeRampTargetValue ?? volume
 		
-		// Stop the player node to reset the time offset to 0
-		playerNode.stop()
+		// Stop the playerEngine node to reset the time offset to 0
+		playerEngineNode.stop()
 		volume = 0
 		
 		// Perform the seek to the proper packet offset
@@ -282,9 +282,9 @@ open class Streamer: Streaming {
 			return
 		}
 		
-		// If the player node was previous playing then resume playback
+		// If the playerEngine node was previous playing then resume playback
 		if isPlaying {
-			playerNode.play()
+			playerEngineNode.play()
 		}
 		
 		// Update the current time
@@ -352,7 +352,7 @@ open class Streamer: Streaming {
 			return
 		}
 
-		playerNode.scheduleFile(validAudioFile, at: nil) {  [weak self] in
+		playerEngineNode.scheduleFile(validAudioFile, at: nil) {  [weak self] in
 			self?.isFileSchedulingComplete = true
 		}
 	}
@@ -369,7 +369,7 @@ open class Streamer: Streaming {
 		
 		do {
 			let nextScheduledBuffer = try reader.read(readBufferSize)
-			playerNode.scheduleBuffer(nextScheduledBuffer)
+			playerEngineNode.scheduleBuffer(nextScheduledBuffer)
 		} catch ReaderError.reachedEndOfFile {
 			os_log("Scheduler reached end of file", log: Streamer.logger, type: .debug)
 			isFileSchedulingComplete = true
@@ -417,12 +417,12 @@ open class Streamer: Streaming {
 	
 	// MARK: - Notifying The Delegate
 	
-    func notifyDownloadProgress(_ progress: Float, bytes: Int64) {
+	func notifyDownloadProgress(_ progress: Float, bytes: Int64) {
 		guard let url = url else {
 			return
 		}
 		
-        delegate?.streamer(self, updatedDownloadProgress: progress, bytesReceived: bytes, forURL: url)
+		delegate?.streamer(self, updatedDownloadProgress: progress, bytesReceived: bytes, forURL: url)
 	}
 	
 	func notifyDurationUpdate(_ duration: TimeInterval) {
@@ -434,7 +434,7 @@ open class Streamer: Streaming {
 	}
 	
 	func notifyTimeUpdated() {
-		guard engine.isRunning, playerNode.isPlaying else {
+		guard engine.isRunning, playerEngineNode.isPlaying else {
 			return
 		}
 		
