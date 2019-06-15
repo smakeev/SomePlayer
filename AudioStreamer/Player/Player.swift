@@ -129,7 +129,8 @@ open class SomePlayer: NSObject {
 			hasBytes = 0
 			delegate?.player(self, offsetChanged: offset)
 			if aboutBitrate != 0 && offset != 0 {
-				timeOffset = Double(offset * 8) / aboutBitrate
+				timeOffset = Double((offset - headerSize) * 8) / aboutBitrate
+				print("!!! offset: \(offset)")
 			} else {
 				timeOffset = 0
 			}

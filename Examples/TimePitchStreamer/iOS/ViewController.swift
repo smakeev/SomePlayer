@@ -82,9 +82,9 @@ class ViewController: UIViewController {
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3" //1 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_2MG.mp3" //2 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_5MG.mp3" // MG
-		let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
+		//let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
 
-		//let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
+		let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
 		//let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
 		//let str = "http://202.6.74.107:8060/triplej.mp3" //not exist
 
