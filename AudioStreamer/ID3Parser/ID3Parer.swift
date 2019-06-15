@@ -9,8 +9,24 @@
 import Foundation
 import AVFoundation
 
+
 public class ID3Parser: NSObject {
-	var inParsing: Bool = false
+	var avassetGet: Bool = false {
+		didSet {
+			if !inParsing {
+				handler?(asset, headerSize)
+				handler = nil
+			}
+		}
+	}
+	var inParsing:  Bool = true {
+		didSet {
+			if avassetGet {
+				handler?(asset, headerSize)
+				handler = nil
+			}
+		}
+	}
 	var url: URL!
 	var isID3: Bool? {
 		didSet {
@@ -29,26 +45,28 @@ public class ID3Parser: NSObject {
 		self.url = url
 	}
 
-	private var handler: ((AVAsset?) -> Void)?
-	func parse( handler: @escaping (AVAsset?) -> Void) {
-		guard inParsing == false else { return }
+	private var handler: ((AVAsset?, Int64?) -> Void)?
+	func parse( handler: @escaping (AVAsset?, Int64?) -> Void) {
 		self.handler = handler
 		DispatchQueue.global().async {
-			let asset = AVURLAsset(url: self.url)
-			self.handler?(asset)
+			self.asset = AVURLAsset(url: self.url)
+			DispatchQueue.main.async {
+				self.avassetGet = true
+			}
+			self.prepare()
+			self.start()
 		}
-		prepare()
-		start()
 	}
 
 	func cancel() {
-		inParsing = false
+		DispatchQueue.main.async {
+			self.avassetGet = true
+			self.inParsing  = false
+		}
 		task?.cancel()
 	}
 
 	private func start() {
-		guard inParsing == false else { return }
-		inParsing = true
 		guard let task = task else {
 			return
 		}
@@ -98,21 +116,20 @@ extension ID3Parser: URLSessionDataDelegate {
 
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
 		completionHandler(.allow)
-		print("!!! \(response)")
 	}
 
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-		print("!!! data: \(data)")
+
 		//String(data: data)
 		if !String(decoding:data[0...3], as: UTF8.self).hasPrefix("ID3") {
 			isID3 = false
 			inParsing = false
 			return
 		}
-		print("!! ID3")
+
 		//get version
 		let tagVersion = data[3]
-		print("!!! Version: \(tagVersion)")
+
 		if tagVersion > 4 || tagVersion < 0 {
 			isID3 = false
 			inParsing = false
@@ -129,17 +146,19 @@ extension ID3Parser: URLSessionDataDelegate {
 		let sData = sizeData as NSData
 		var num: Int32 = 0
 		sData.getBytes(&num, length: MemoryLayout<Int32>.size)
-		print("!!! \(num)")
 
-		headerSize = Int64(unsynchsafe(num))
-		print("!!! \(unsynchsafe(num))")
+		headerSize = Int64(unsynchsafe(num)) + 10
 
 		var uses_synch = (data[5] & 0x80) != 0 ? true : false;
 		var has_extended_hdr = (data[5] & 0x40) != 0 ? true : false;
 		print("!!! \(uses_synch)  \(has_extended_hdr)")
+		if has_extended_hdr {
+			//get it size
+		}
+		self.inParsing = false
 	}
 
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-		print("!!! completed: \(error)")
+
 	}
 }

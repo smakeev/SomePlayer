@@ -102,13 +102,13 @@ open class SomePlayer: NSObject {
 		}
 	}
 	
-	
 	public internal(set) var rangeHeader:    Bool  = false
 	public internal(set) var totalSize:      Int64 = 0 {
 		didSet {
-
+			self.aboutBitrate = (Double(self.totalSize - self.headerSize) * 8) / self.duration
 		}
 	}
+	public internal(set) var headerSize:     Int64 = 0
 	public internal(set) var hasBytes:       Int64 = 0 {
 		didSet {
 
@@ -117,14 +117,31 @@ open class SomePlayer: NSObject {
 			}
 		}
 	}
-	public               var offset:         Int64 = 0 {
+	
+	public internal(set) var aboutBitrate: Double = 0 {
+		didSet {
+		
+		}
+	}
+	public internal(set) var offset: Int64 = 0 {
 		didSet {
 			resumableData = nil
 			hasBytes = 0
 			delegate?.player(self, offsetChanged: offset)
-
+			if aboutBitrate != 0 && offset != 0 {
+				timeOffset = Double(offset * 8) / aboutBitrate
+			} else {
+				timeOffset = 0
+			}
 		}
 	}
+	
+	public internal(set) var timeOffset:     TimeInterval = 0 {
+		didSet {
+			print("!!! timeOffset: \(timeOffset.toHHMMSS())")
+		}
+	}
+	
 	public internal(set) var hasError:       Bool = false
 	
 	public fileprivate(set) var resumableData: ResumableData?
@@ -172,7 +189,6 @@ open class SomePlayer: NSObject {
 //    var audioLengthSamples: AVAudioFramePosition = 0
 //    var audioSampleRate: Float = 0
 
-
 	public private(set) var title: String? {
 		didSet {
 			guard let validTitle = title else { return }
@@ -198,8 +214,6 @@ open class SomePlayer: NSObject {
 		}
 	}
 
-
-	
 	private var id3Parser: ID3Parser?
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
 		self.state = .initializing
@@ -208,8 +222,12 @@ open class SomePlayer: NSObject {
 				self.id3Parser?.cancel()
 			}
 			self.id3Parser = ID3Parser(url)
-			self.id3Parser?.parse { asset in
+			self.id3Parser?.parse { asset, headerSize in
 				if let asset = asset {
+				
+					DispatchQueue.main.async {
+						self.headerSize = headerSize ?? 0
+					}
 					let availableMetaFormats = asset.availableMetadataFormats
 					for format in availableMetaFormats {
 						for item in asset.metadata(forFormat: format) {
@@ -311,6 +329,7 @@ open class SomePlayer: NSObject {
 		}
 
 		//check if we in downloaded part
+		let totalSize = self.totalSize - self.headerSize
 		let weAreHere = offset + hasBytes
 		let percentWeAre = Float(weAreHere) / Float(totalSize)
 		let percentOffset = Float(offset) / Float(totalSize)
@@ -331,7 +350,7 @@ open class SomePlayer: NSObject {
 			return
 		}
 		//make offset and restart downloading
-		offset = Int64(Float(totalSize) * percent)
+		offset = Int64(Float(totalSize) * percent) + headerSize
 		resumableData = ResumableData(offset: offset)
 		restart()
 	}
