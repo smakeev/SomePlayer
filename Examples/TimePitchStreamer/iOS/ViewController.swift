@@ -190,7 +190,9 @@ class ViewController: UIViewController {
 			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * player.hasDuration
 			currentTimeLabel.text = currentTime.toMMSS()
 		} else {
+			guard progressSlider.maximumValue != 0 else { return }
 			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * player.duration
+			print("!!! \(progressSlider.maximumValue)")
 			currentTimeLabel.text = currentTime.toMMSS()
 		}
 	}
