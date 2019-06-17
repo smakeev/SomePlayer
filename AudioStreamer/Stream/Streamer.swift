@@ -401,9 +401,11 @@ open class Streamer: Streaming {
 	
 	/// Handles the current time relative to the duration to make sure current time does not exceed the duration
 	func handleTimeUpdate() {
-		guard let currentTime = currentTime, let duration = duration else {
+		guard let currentTime = currentTime else {
 			return
 		}
+
+		let duration = self.duration ?? 0
 		
 		if currentTime >= duration {
 			try? seek(to: 0)

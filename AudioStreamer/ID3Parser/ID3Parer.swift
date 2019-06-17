@@ -106,9 +106,7 @@ extension ID3Parser {
 
 		return outP
 	}
-
 }
-
 
 // biteOffset = <ID3V2 size> + (<seconds> * <bitrate> * 8)
 
@@ -122,8 +120,10 @@ extension ID3Parser: URLSessionDataDelegate {
 
 		//String(data: data)
 		if !String(decoding:data[0...3], as: UTF8.self).hasPrefix("ID3") {
-			isID3 = false
-			inParsing = false
+			DispatchQueue.main.async {
+				self.isID3     = false
+				self.inParsing = false
+			}
 			return
 		}
 
@@ -131,8 +131,10 @@ extension ID3Parser: URLSessionDataDelegate {
 		let tagVersion = data[3]
 
 		if tagVersion > 4 || tagVersion < 0 {
-			isID3 = false
-			inParsing = false
+			DispatchQueue.main.async {
+				self.isID3     = false
+				self.inParsing = false
+			}
 			return
 		}
 		version = tagVersion
@@ -149,13 +151,16 @@ extension ID3Parser: URLSessionDataDelegate {
 
 		headerSize = Int64(unsynchsafe(num)) + 10
 
-		var uses_synch = (data[5] & 0x80) != 0 ? true : false;
-		var has_extended_hdr = (data[5] & 0x40) != 0 ? true : false;
-		print("!!! \(uses_synch)  \(has_extended_hdr)")
-		if has_extended_hdr {
-			//get it size
+		//not needed for now. For now we only need to get the size of ID3
+//		let uses_synch = (data[5] & 0x80) != 0 ? true : false;
+//		let has_extended_hdr = (data[5] & 0x40) != 0 ? true : false;
+//
+//		if has_extended_hdr {
+//			//get it's size
+//		}
+		DispatchQueue.main.async {
+			self.inParsing = false
 		}
-		self.inParsing = false
 	}
 
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
