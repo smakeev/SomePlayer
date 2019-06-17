@@ -37,6 +37,15 @@ open class SomePlayerEngine: NSObject {
 		case failed
 	}
 
+	public var volume: Float {
+		get {
+			return streamer.volume
+		}
+		set {
+			streamer.volume = newValue
+		}
+	}
+
 	public enum SilenceHandlingType {
 		case none
 		case smart
@@ -456,7 +465,9 @@ open class SomePlayerEngine: NSObject {
 			//print("CH1 \(String(describing: averagePowerForChannel1))")
 		}
 	}
-	
+
+	public fileprivate(set) var lastBuffer: AVAudioPCMBuffer?
+
 }
 
 extension SomePlayerEngine: StreamingDelegate {
@@ -508,7 +519,7 @@ extension SomePlayerEngine: StreamingDelegate {
 		delegate?.playerEngine(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
 		delegate?.playerEngine(self, updatedDuration: duration)
 	}
-	
+
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
 		amplitudes = [Float]()
 		self.rate = self.baseRate
@@ -526,6 +537,7 @@ extension SomePlayerEngine: StreamingDelegate {
 			let format = mainMixer.outputFormat(forBus: 0)
 			print(format)
 			mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
+				self.lastBuffer = buffer
 				buffer.frameLength = bufferSize
 				
 				if buffer.format.channelCount > 0 {

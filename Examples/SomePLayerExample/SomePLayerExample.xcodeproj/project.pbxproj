@@ -14,6 +14,16 @@
 		B619964722B7CCED008631EB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B619964522B7CCED008631EB /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B619965F22B7CE76008631EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B619965A22B7CE76008631EB /* SomePLayer.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = B619962522B7CC7A008631EB;
+			remoteInfo = SomePLayer;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		B619963922B7CCEB008631EB /* SomePLayerExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SomePLayerExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B619963C22B7CCEB008631EB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -22,6 +32,7 @@
 		B619964322B7CCED008631EB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B619964622B7CCED008631EB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B619964822B7CCED008631EB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B619965A22B7CE76008631EB /* SomePLayer.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SomePLayer.xcodeproj; path = ../../SomePLayer.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +49,7 @@
 		B619963022B7CCEB008631EB = {
 			isa = PBXGroup;
 			children = (
+				B619965A22B7CE76008631EB /* SomePLayer.xcodeproj */,
 				B619963B22B7CCEB008631EB /* SomePLayerExample */,
 				B619963A22B7CCEB008631EB /* Products */,
 			);
@@ -62,6 +74,14 @@
 				B619964822B7CCED008631EB /* Info.plist */,
 			);
 			path = SomePLayerExample;
+			sourceTree = "<group>";
+		};
+		B619965B22B7CE76008631EB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B619966022B7CE76008631EB /* SomePLayer.framework */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -110,12 +130,28 @@
 			mainGroup = B619963022B7CCEB008631EB;
 			productRefGroup = B619963A22B7CCEB008631EB /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B619965B22B7CE76008631EB /* Products */;
+					ProjectRef = B619965A22B7CE76008631EB /* SomePLayer.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				B619963822B7CCEB008631EB /* SomePLayerExample */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		B619966022B7CE76008631EB /* SomePLayer.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SomePLayer.framework;
+			remoteRef = B619965F22B7CE76008631EB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B619963722B7CCEB008631EB /* Resources */ = {

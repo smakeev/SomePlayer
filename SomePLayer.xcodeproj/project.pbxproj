@@ -8,12 +8,47 @@
 
 /* Begin PBXBuildFile section */
 		B619962A22B7CC7A008631EB /* SomePLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = B619962822B7CC7A008631EB /* SomePLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		B619966322B7CEF9008631EB /* SAPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619966222B7CEF9008631EB /* SAPlayer.swift */; };
+		B619966F22B7D01D008631EB /* AudioStreamer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B619965522B7CD52008631EB /* AudioStreamer.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B619965422B7CD52008631EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 66A1395920013F860076B0E5;
+			remoteInfo = "AudioStreamer-iOS";
+		};
+		B619965622B7CD52008631EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 66A1396220013F860076B0E5;
+			remoteInfo = "AudioStreamer-iOSTests";
+		};
+		B619965822B7CD52008631EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 6643D821217833CF003DA158;
+			remoteInfo = "AudioStreamer-macOS";
+		};
+		B619966922B7CFE8008631EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 66A1395820013F860076B0E5;
+			remoteInfo = "AudioStreamer-iOS";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		B619962522B7CC7A008631EB /* SomePLayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SomePLayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B619962822B7CC7A008631EB /* SomePLayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SomePLayer.h; sourceTree = "<group>"; };
 		B619962922B7CC7A008631EB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AudioStreamer.xcodeproj; sourceTree = "<group>"; };
+		B619966222B7CEF9008631EB /* SAPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SAPlayer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -21,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B619966F22B7D01D008631EB /* AudioStreamer.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30,8 +66,10 @@
 		B619961B22B7CC7A008631EB = {
 			isa = PBXGroup;
 			children = (
+				B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */,
 				B619962722B7CC7A008631EB /* SomePLayer */,
 				B619962622B7CC7A008631EB /* Products */,
+				B619966E22B7D01D008631EB /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -48,8 +86,26 @@
 			children = (
 				B619962822B7CC7A008631EB /* SomePLayer.h */,
 				B619962922B7CC7A008631EB /* Info.plist */,
+				B619966222B7CEF9008631EB /* SAPlayer.swift */,
 			);
 			path = SomePLayer;
+			sourceTree = "<group>";
+		};
+		B619964F22B7CD52008631EB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B619965522B7CD52008631EB /* AudioStreamer.framework */,
+				B619965722B7CD52008631EB /* AudioStreamerTests.xctest */,
+				B619965922B7CD52008631EB /* AudioStreamer.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B619966E22B7D01D008631EB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -78,6 +134,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B619966A22B7CFE8008631EB /* PBXTargetDependency */,
 			);
 			name = SomePLayer;
 			productName = SomePLayer;
@@ -95,6 +152,7 @@
 				TargetAttributes = {
 					B619962422B7CC7A008631EB = {
 						CreatedOnToolsVersion = 10.2.1;
+						LastSwiftMigration = 1020;
 					};
 				};
 			};
@@ -108,12 +166,42 @@
 			mainGroup = B619961B22B7CC7A008631EB;
 			productRefGroup = B619962622B7CC7A008631EB /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B619964F22B7CD52008631EB /* Products */;
+					ProjectRef = B619964E22B7CD52008631EB /* AudioStreamer.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				B619962422B7CC7A008631EB /* SomePLayer */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		B619965522B7CD52008631EB /* AudioStreamer.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AudioStreamer.framework;
+			remoteRef = B619965422B7CD52008631EB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B619965722B7CD52008631EB /* AudioStreamerTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = AudioStreamerTests.xctest;
+			remoteRef = B619965622B7CD52008631EB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B619965922B7CD52008631EB /* AudioStreamer.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AudioStreamer.framework;
+			remoteRef = B619965822B7CD52008631EB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B619962322B7CC7A008631EB /* Resources */ = {
@@ -130,10 +218,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B619966322B7CEF9008631EB /* SAPlayer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B619966A22B7CFE8008631EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "AudioStreamer-iOS";
+			targetProxy = B619966922B7CFE8008631EB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B619962B22B7CC7A008631EB /* Debug */ = {
@@ -261,6 +358,7 @@
 		B619962E22B7CC7A008631EB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
@@ -278,6 +376,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "SOME-Projects.SomePLayer";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -286,6 +385,7 @@
 		B619962F22B7CC7A008631EB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
