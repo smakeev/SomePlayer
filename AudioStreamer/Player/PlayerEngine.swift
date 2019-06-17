@@ -85,6 +85,8 @@ open class SomePlayerEngine: NSObject {
 		}
 	}
 
+	public internal(set) var currentTime: TimeInterval = 0
+
 	public var duration:         TimeInterval {
 		get {
 			return max(hasDuration, estimatedDuration)
@@ -139,7 +141,6 @@ open class SomePlayerEngine: NSObject {
 	
 	public internal(set) var timeOffset:     TimeInterval = 0 {
 		didSet {
-			print("!!! timeOffset: \(timeOffset.toHHMMSS())")
 		}
 	}
 	
@@ -461,6 +462,7 @@ open class SomePlayerEngine: NSObject {
 extension SomePlayerEngine: StreamingDelegate {
 
 	public func streamer(_ streamer: Streaming, fileFinished url: URL) {
+		self.currentTime = timeOffset
 		self.state = .ended
 	}
 
@@ -572,6 +574,7 @@ extension SomePlayerEngine: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
+		self.currentTime = currentTime
 		delegate?.playerEngine(self, updatedCurrentTime: currentTime)
 	}
 	
