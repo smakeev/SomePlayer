@@ -91,6 +91,7 @@ open class SomePlayerEngine: NSObject {
 			if state != oldValue {
 				self.delegate?.playerEngine(self, changedState: state)
 			}
+			print("!!!! \(state)")
 		}
 	}
 
