@@ -103,6 +103,77 @@ open class SAPlayer {
 
 	final public class Queue {
 
+		public var count: UInt = 0
+		public var index: UInt = 0
+
+		public var first: SAPLayerItemRef?
+		public var last:  SAPLayerItemRef?
+
+		weak public var player: SAPlayer?
+
+		init(_ player: SAPlayer) {
+			self.player = player
+		}
+
+		public func itemForIndex(_ index: UInt) -> SAPLayerItemRef? {
+			return nil
+		}
+
+		public func append(_ item: SAPLayerItemRef) {
+
+		}
+
+		public func push(_ item: SAPLayerItemRef) {
+
+		}
+
+		public func insert(at index: UInt, item: SAPLayerItemRef) {
+
+		}
+
+		public func remove(at index: UInt) {
+
+		}
+
+		public func remove(_ item: SAPLayerItemRef) {
+
+		}
+
+		public func removeLast() -> SAPLayerItemRef? {
+			return nil
+		}
+
+		public func pop() -> SAPLayerItemRef? {
+			return nil
+		}
+
+		public func randomize() {
+
+		}
+
+		public func `switch`(index1: UInt, with index2: UInt) {
+
+		}
+
+		public func goNext() {
+
+		}
+
+		public func goBack() {
+
+		}
+
+		public func playNext(_ item: SAPLayerItemRef) {
+
+		}
+
+		public func removeFromPlayNext(_ item: SAPLayerItemRef) {
+
+		}
+
+		public func clearPlayNext() {
+
+		}
 
 		public func next(onChange observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
@@ -148,21 +219,38 @@ open class SAPlayer {
 
 		}
 
-		private func willGoNext() {
+		private func onWillGoNext() {
 
 		}
 
-		private func wentNext() {
+		private func onWentNext() {
 
 		}
 	}
 
 	public init() {
-		playlist      = Queue()
 		privateEngine = SomePlayerEngine()
 		engine        = privateEngine as Engine
 		state         = .undefined
 		currentTime   = 0
+		playlist      = Queue(self)
+	}
+
+	public var background:    Bool = false {
+		didSet {
+
+		}
+	}
+	public var controlCenter: Bool = false {
+		didSet {
+
+		}
+	}
+
+	public var carPLay:       Bool = false {
+		didSet {
+
+		}
 	}
 
 	public var volume: Float {
