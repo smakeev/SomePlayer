@@ -104,7 +104,7 @@ open class SAPlayer {
 	final public class Queue {
 
 
-		public func each(onChange observer: AnyObject?, handler: @escaping (Queue) -> Void) {
+		public func next(onChange observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
 		}
 
@@ -116,7 +116,7 @@ open class SAPlayer {
 
 		}
 
-		public func each(willGoNext observer: AnyObject?, handler: @escaping (Queue) -> Void) {
+		public func next(willGoNext observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
 		}
 
@@ -128,7 +128,7 @@ open class SAPlayer {
 
 		}
 
-		public func each(wentNext observer: AnyObject?, handler: @escaping (Queue) -> Void) {
+		public func next(wentNext observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
 		}
 
@@ -233,11 +233,17 @@ open class SAPlayer {
 	}
 
 	//effects:
+	public func setSmartSpeed(_ activate: Bool) {
 
+	}
+
+	public func setSilenceSpeedUp(_ activate: Bool) {
+
+	}
 
 	//handlers
 
-	public func each(onVolume observer: AnyObject?, handler: @escaping (Float) -> Void) {
+	public func next(onVolume observer: AnyObject?, handler: @escaping (Float) -> Void) {
 
 	}
 
@@ -249,7 +255,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onRate observer: AnyObject?, handler: @escaping (Float) -> Void) {
+	public func next(onRate observer: AnyObject?, handler: @escaping (Float) -> Void) {
 
 	}
 
@@ -261,7 +267,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onPitch observer: AnyObject?, handler: @escaping (Float) -> Void) {
+	public func next(onPitch observer: AnyObject?, handler: @escaping (Float) -> Void) {
 
 	}
 
@@ -273,7 +279,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onState observer: AnyObject?, handler: @escaping (SAPlayerState) -> Void) {
+	public func next(onState observer: AnyObject?, handler: @escaping (SAPlayerState) -> Void) {
 
 	}
 
@@ -285,7 +291,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onCurrentItem observer: AnyObject?, handler: @escaping (SAPLayerItemRef?) -> Void) {
+	public func next(onCurrentItem observer: AnyObject?, handler: @escaping (SAPLayerItemRef?) -> Void) {
 
 	}
 
@@ -297,7 +303,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(oPlaylist observer: AnyObject?, handler: @escaping (Queue) -> Void) {
+	public func next(oPlaylist observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
 	}
 
@@ -309,7 +315,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onTime observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
+	public func next(onTime observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
 
 	}
 
@@ -321,7 +327,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onSecondsSaved observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
+	public func next(onSecondsSaved observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
 
 	}
 
@@ -333,7 +339,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onDuration observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
+	public func next(onDuration observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
 
 	}
 
@@ -349,7 +355,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onDownloadProgress observer: AnyObject?, handler: @escaping (Float) -> Void) {
+	public func next(onDownloadProgress observer: AnyObject?, handler: @escaping (Float) -> Void) {
 
 	}
 
@@ -357,7 +363,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onItemFinished observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onItemFinished observer: AnyObject?, handler : @escaping () -> Void) {
 
 	}
 
@@ -369,7 +375,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onLeftChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onLeftChannel observer: AnyObject?, handler : @escaping () -> Void) {
 
 	}
 
@@ -381,7 +387,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onRightChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onRightChannel observer: AnyObject?, handler : @escaping () -> Void) {
 
 	}
 
@@ -393,7 +399,7 @@ open class SAPlayer {
 
 	}
 
-	public func each(onBufferChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onBufferChannel observer: AnyObject?, handler : @escaping () -> Void) {
 
 	}
 
@@ -402,6 +408,42 @@ open class SAPlayer {
 	}
 
 	public func unsubscribe(onBufferChannel observer: AnyObject?) {
+
+	}
+
+	public func next(onDownloadCompleted observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func once(onDownloadCompleted observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func unsubscribe(onDownloadCompleted observer: AnyObject?) {
+
+	}
+
+	public func next(onSmartSpeed observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func once(onSmartSpeed observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func unsubscribe(onSmartSpeed observer: AnyObject?) {
+
+	}
+
+	public func next(onSilenceSpeedUp observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func once(onSilenceSpeedUp observer: AnyObject?, handler : @escaping () -> Void) {
+
+	}
+
+	public func unsubscribe(onSilenceSpeedUp observer: AnyObject?) {
 
 	}
 
@@ -459,6 +501,10 @@ extension SAPlayer {
 
 	}
 
+	fileprivate func onDownloadComplete() {
+
+	}
+
 	fileprivate func onItemFinished() {
 
 	}
@@ -478,9 +524,14 @@ extension SAPlayer {
 	fileprivate func onCurrentItemElements() {
 
 	}
-	//onSmartSpeed
 
+	fileprivate func onSmartSpeed() {
 
+	}
+
+	fileprivate func onSilenceSpeedUp() {
+
+	}
 }
 
 extension SomePlayerEngine: Engine {
