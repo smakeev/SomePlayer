@@ -86,6 +86,22 @@ open class SomePlayerEngine: NSObject {
 		}
 	}
 
+	public internal(set) var isGoodForStream: Bool = false {
+		didSet {
+			for observer in isGoodForStreamObservers.values {
+				observer(isGoodForStream)
+			}
+		}
+	}
+	fileprivate var isGoodForStreamObservers: [String : (Bool)->Void] = [String : (Bool)->Void]()
+	public func addIsGoodForStreamObservers(withId id: String, observer: @escaping (Bool)->Void) {
+		isGoodForStreamObservers[id] = observer
+	}
+
+	public func removeIsGoodForStreamObservers(withId id: String) {
+		isGoodForStreamObservers[id] = nil
+	}
+
 	public fileprivate(set) var state: playerEngineState = .undefined {
 		didSet {
 			if state != oldValue {
@@ -142,7 +158,6 @@ open class SomePlayerEngine: NSObject {
 			delegate?.playerEngine(self, offsetChanged: offset)
 			if aboutBitrate != 0 && offset != 0 {
 				timeOffset = Double((offset - headerSize) * 8) / aboutBitrate
-				print("!!! offset: \(offset)")
 			} else {
 				timeOffset = 0
 			}
@@ -197,10 +212,6 @@ open class SomePlayerEngine: NSObject {
 		}
 	}
 
-//    var audioLengthSeconds: Float = 0
-//    var audioLengthSamples: AVAudioFramePosition = 0
-//    var audioSampleRate: Float = 0
-
 	public private(set) var title: String? {
 		didSet {
 			guard let validTitle = title else { return }
@@ -238,6 +249,11 @@ open class SomePlayerEngine: NSObject {
 				if let asset = asset {
 				
 					DispatchQueue.main.async {
+						if headerSize == nil {
+							self.isGoodForStream = false
+						} else {
+							self.isGoodForStream = true //but bitrate could be variable
+						}
 						self.headerSize = headerSize ?? 0
 					}
 					let availableMetaFormats = asset.availableMetadataFormats

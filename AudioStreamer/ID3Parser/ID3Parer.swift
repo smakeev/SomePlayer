@@ -53,6 +53,8 @@ public class ID3Parser: NSObject {
 			DispatchQueue.main.async {
 				self.avassetGet = true
 			}
+		}
+		DispatchQueue.global().async {
 			self.prepare()
 			self.start()
 		}
