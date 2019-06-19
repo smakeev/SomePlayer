@@ -60,7 +60,7 @@ class ViewController: UIViewController {
 		// Reset the pitch and rate
 		resetPitch(self)
 		resetRate(self)
-		
+
 		/// Download
 		//let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
 		//let url = URL(string: "https://traffic.megaphone.fm/GLT1846252911.mp3")!
@@ -94,6 +94,9 @@ class ViewController: UIViewController {
 		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
 
 		let url = URL(string: str)!
+		ID3Parser.isGoodForStream(url) {
+			print("!!! static isGood: \($0)")
+		}
 		playerEngine.openRemote(url)
 
 		playerEngine.addRateObserver(withId: "controller") { value in

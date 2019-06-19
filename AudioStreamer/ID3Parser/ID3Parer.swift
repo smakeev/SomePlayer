@@ -11,6 +11,12 @@ import AVFoundation
 
 
 public class ID3Parser: NSObject {
+
+	public static func isGoodForStream(_ url: URL, handler: @escaping (Bool) -> Void) {
+		let parser = ID3Parser(url, quickTest: true)
+		parser.quickTest(handler)
+	}
+
 	var avassetGet: Bool = false {
 		didSet {
 			if !inParsing {
@@ -19,6 +25,7 @@ public class ID3Parser: NSObject {
 			}
 		}
 	}
+
 	var inParsing:  Bool = true {
 		didSet {
 			if avassetGet {
@@ -27,10 +34,13 @@ public class ID3Parser: NSObject {
 			}
 		}
 	}
+
 	var url: URL!
 	var isID3: Bool? {
 		didSet {
-			//inform with result
+			if isQuick {
+				quickHandler?(isID3 ?? false)
+			}
 		}
 	}
 	
@@ -39,13 +49,25 @@ public class ID3Parser: NSObject {
 	var version: UInt8?
 	var getVersion: String? { return version == nil ? nil : String("2.\(version)") }
 	var headerSize: Int64?
+	var isQuick   : Bool = false
 
-	init(_ url: URL) {
+	init(_ url: URL, quickTest isQuick: Bool = false) {
 		super.init()
 		self.url = url
+		self.isQuick = isQuick
 	}
 
-	private var handler: ((AVAsset?, Int64?) -> Void)?
+	private var handler:      ((AVAsset?, Int64?) -> Void)?
+	private var quickHandler: ((Bool) -> Void)?
+
+	func quickTest(_ handler: @escaping (Bool) -> Void) {
+		self.quickHandler = handler
+		DispatchQueue.global().async {
+			self.prepare()
+			self.start()
+		}
+	}
+
 	func parse( handler: @escaping (AVAsset?, Int64?) -> Void) {
 		self.handler = handler
 		DispatchQueue.global().async {
@@ -81,13 +103,15 @@ public class ID3Parser: NSObject {
 		return URLSession(configuration: .default, delegate: self, delegateQueue: nil)
 	}()
 
-	fileprivate let dataLimit = 1000 //how many bytes get to check if this is a ID3
+	fileprivate var dataLimit = 1000 //how many bytes get to check if this is a ID3
 }
 
 extension ID3Parser {
 	fileprivate func prepare() {
 		guard let url = url else { return }
-
+		if isQuick {
+			dataLimit = 3
+		}
 		var request = URLRequest(url: url)
 		var headers = request.allHTTPHeaderFields ?? [:]
 		headers["Range"] = "bytes=0-\(dataLimit)"
@@ -126,6 +150,9 @@ extension ID3Parser: URLSessionDataDelegate {
 				self.isID3     = false
 				self.inParsing = false
 			}
+			return
+		} else if isQuick {
+			self.isID3 = true
 			return
 		}
 
