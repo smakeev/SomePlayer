@@ -128,7 +128,11 @@ open class Streamer: Streaming {
 	}
 	
 	// MARK: - Reset
-	
+
+	deinit{
+		print("!!!! DEINIT")
+	}
+
 	func reset() {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		

@@ -39,7 +39,7 @@ public class ID3Parser: NSObject {
 	var isID3: Bool? {
 		didSet {
 			if isQuick {
-				quickHandler?(isID3 ?? false)
+				self.quickHandler?(self.isID3 ?? false)
 			}
 		}
 	}
@@ -152,7 +152,9 @@ extension ID3Parser: URLSessionDataDelegate {
 			}
 			return
 		} else if isQuick {
-			self.isID3 = true
+			DispatchQueue.main.async {
+				self.isID3 = true
+			}
 			return
 		}
 

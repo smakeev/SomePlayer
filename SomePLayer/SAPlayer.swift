@@ -28,8 +28,11 @@ open class SAPlayer {
 		public var artist: String?
 		public var album:  String?
 		public var image:  UIImage?
-
 		public var duration: TimeInterval
+		public var id: String { return idInternal.uuidString }
+		public var anythingElse: Any?
+
+		private var idInternal: UUID
 
 		init(url: URL,
 			 isLocal:  Bool?    = nil,
@@ -37,16 +40,18 @@ open class SAPlayer {
 			 artist:   String?  = nil,
 			 album:    String?  = nil,
 			 image:    UIImage? = nil,
-			 duration: TimeInterval = 0) {
+			 duration: TimeInterval = 0,
+			 anythingElse: Any? = nil) {
 
-			self.url      = url
-			self.isLocal  = isLocal
-			self.title    = title
-			self.artist   = artist
-			self.album    = album
-			self.image    = image
-			self.duration = duration
-
+			self.url          = url
+			self.isLocal      = isLocal
+			self.title        = title
+			self.artist       = artist
+			self.album        = album
+			self.image        = image
+			self.duration     = duration
+			self.anythingElse = anythingElse
+			self.idInternal   = UUID()
 		}
 
 		internal mutating func setTitle(_ title: String?) {
@@ -103,8 +108,22 @@ open class SAPlayer {
 
 	final public class Queue {
 
-		public var count: UInt = 0
-		public var index: UInt = 0
+		public enum QueueType {
+			case general
+			case playNext
+			case sorted
+			case randomized
+		}
+
+		public private(set) var type: QueueType = .general {
+			didSet {
+				onQueueType()
+			}
+		}
+
+		public var count:         UInt = 0
+		public var playNextCount: UInt = 0
+		public var index:         UInt = 0
 
 		public var first: SAPLayerItemRef?
 		public var last:  SAPLayerItemRef?
@@ -148,6 +167,14 @@ open class SAPlayer {
 		}
 
 		public func randomize() {
+
+		}
+
+		public func sort(sortRule ascending: (SAPLayerItemRef, SAPLayerItemRef) -> Bool) {
+
+		}
+
+		public func restoreOrder() {
 
 		}
 
@@ -211,28 +238,53 @@ open class SAPlayer {
 
 		}
 
+		public func next(type observer: AnyObject?, handler: @escaping (QueueType) -> Void) {
+
+		}
+
+		public func once(type observer: AnyObject?, handler: @escaping (QueueType) -> Void) {
+
+		}
+
+		public func unsubscribe(type observer: AnyObject?) {
+
+		}
+
+
 		public func unsubscribe(_ observer: AnyObject?) {
 
 		}
 
 		private func onChange() {
-
+			onChangeDispatcher.dispatch(self)
 		}
 
 		private func onWillGoNext() {
-
+			onWillGoNextDispatcher.dispatch(self)
 		}
 
 		private func onWentNext() {
-
+			onWenNexDispatcher.dispatch(self)
 		}
+
+		private func onQueueType() {
+			onTypeDispatcher.dispatch(type)
+		}
+
+		private var onChangeDispatcher     = Dispatcher<Queue>()
+		private var onWillGoNextDispatcher = Dispatcher<Queue>()
+		private var onWenNexDispatcher     = Dispatcher<Queue>()
+		private var onTypeDispatcher       = Dispatcher<QueueType>()
+
+		private var playNextItems = [SAPLayerItemRef]()
+		private var items         = [SAPLayerItemRef]()
+		private var orderedItems  = [SAPLayerItemRef]()
 	}
 
 	public init() {
 		privateEngine = SomePlayerEngine()
 		engine        = privateEngine as Engine
 		state         = .undefined
-		currentTime   = 0
 		playlist      = Queue(self)
 	}
 
@@ -241,6 +293,7 @@ open class SAPlayer {
 
 		}
 	}
+
 	public var controlCenter: Bool = false {
 		didSet {
 
@@ -284,9 +337,18 @@ open class SAPlayer {
 
 	public internal(set) var state:       SAPlayerState!
 	public internal(set) var currentItem: SAPLayerItemRef?
-	public internal(set) var currentTime: TimeInterval
+	public var currentTime: TimeInterval {
+		get {
+			return privateEngine.currentTime + timeOffset
+		}
+	}
 	public internal(set) var engine:      Engine!
 	public internal(set) var playlist:    Queue!
+	public var timeOffset: TimeInterval {
+		get {
+			return privateEngine.timeOffset
+		}
+	}
 
 	@discardableResult public func play() -> Bool {
 		return false
@@ -330,6 +392,54 @@ open class SAPlayer {
 	}
 
 	//handlers
+
+	public func next(onTimeOffset observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
+
+	}
+
+	public func once(onTimeOffset observer: AnyObject?, handler: @escaping (TimeInterval) -> Void) {
+
+	}
+
+	public func unsubscribe(onTimeOfset observer: AnyObject?) {
+
+	}
+
+	public func next(onBackground observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func once(onBackground observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func unsubscribe(onBackground observer: AnyObject?) {
+
+	}
+
+	public func next(onCarPlay observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func once(onCarPlay observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func unsubscribe(onCarPlay observer: AnyObject?) {
+
+	}
+
+	public func next(onControllCenter observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func once(onControllCenter observer: AnyObject?, handler: @escaping (Bool) -> Void) {
+
+	}
+
+	public func unsubscribe(onControllCenter observer: AnyObject?) {
+
+	}
 
 	public func next(onVolume observer: AnyObject?, handler: @escaping (Float) -> Void) {
 
@@ -391,7 +501,7 @@ open class SAPlayer {
 
 	}
 
-	public func next(oPlaylist observer: AnyObject?, handler: @escaping (Queue) -> Void) {
+	public func next(onPlaylist observer: AnyObject?, handler: @escaping (Queue) -> Void) {
 
 	}
 
@@ -399,7 +509,7 @@ open class SAPlayer {
 
 	}
 
-	public func unsubscribe(oPlaylist observer: AnyObject?) {
+	public func unsubscribe(onPlaylist observer: AnyObject?) {
 
 	}
 
@@ -451,11 +561,11 @@ open class SAPlayer {
 
 	}
 
-	public func next(onItemFinished observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onItemFinished observer: AnyObject?, handler : @escaping (SAPLayerItemRef) -> Void) {
 
 	}
 
-	public func once(onItemFinished observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onItemFinished observer: AnyObject?, handler : @escaping (SAPLayerItemRef) -> Void) {
 
 	}
 
@@ -463,11 +573,11 @@ open class SAPlayer {
 
 	}
 
-	public func next(onLeftChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onLeftChannel observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
-	public func once(onLeftChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onLeftChannel observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
@@ -475,11 +585,11 @@ open class SAPlayer {
 
 	}
 
-	public func next(onRightChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onRightChannel observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
-	public func once(onRightChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onRightChannel observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
@@ -487,23 +597,23 @@ open class SAPlayer {
 
 	}
 
-	public func next(onBufferChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onBuffer observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
-	public func once(onBufferChannel observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onBuffer observer: AnyObject?, handler : @escaping (Float?) -> Void) {
 
 	}
 
-	public func unsubscribe(onBufferChannel observer: AnyObject?) {
+	public func unsubscribe(onBuffer observer: AnyObject?) {
 
 	}
 
-	public func next(onDownloadCompleted observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onDownloadCompleted observer: AnyObject?, handler : @escaping (SAPlayer) -> Void) {
 
 	}
 
-	public func once(onDownloadCompleted observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onDownloadCompleted observer: AnyObject?, handler : @escaping (SAPlayer) -> Void) {
 
 	}
 
@@ -511,11 +621,11 @@ open class SAPlayer {
 
 	}
 
-	public func next(onSmartSpeed observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onSmartSpeed observer: AnyObject?, handler : @escaping (Bool) -> Void) {
 
 	}
 
-	public func once(onSmartSpeed observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onSmartSpeed observer: AnyObject?, handler : @escaping (Bool) -> Void) {
 
 	}
 
@@ -523,11 +633,11 @@ open class SAPlayer {
 
 	}
 
-	public func next(onSilenceSpeedUp observer: AnyObject?, handler : @escaping () -> Void) {
+	public func next(onSilenceSpeedUp observer: AnyObject?, handler : @escaping (Bool) -> Void) {
 
 	}
 
-	public func once(onSilenceSpeedUp observer: AnyObject?, handler : @escaping () -> Void) {
+	public func once(onSilenceSpeedUp observer: AnyObject?, handler : @escaping (Bool) -> Void) {
 
 	}
 
@@ -541,28 +651,50 @@ open class SAPlayer {
 
 	internal var privateEngine: SomePlayerEngine!
 
-	fileprivate func updateUI() {
-
-	}
+	fileprivate var onBackgroundDispatcher        = Dispatcher<Bool>()
+	fileprivate var onCarPlayDispatcher           = Dispatcher<Bool>()
+	fileprivate var onControllCenterDispatcher    = Dispatcher<Bool>()
+	fileprivate var onVolumeDispatcher            = Dispatcher<Float>()
+	fileprivate var onRateDispatcher              = Dispatcher<Float>()
+	fileprivate var onPitchDispatcher             = Dispatcher<Float>()
+	fileprivate var onStateDispatcher             = Dispatcher<SAPlayerState>()
+	fileprivate var onCurrentItemDispatcher       = Dispatcher<SAPLayerItemRef>()
+	fileprivate var onPlaylistDispatcher          = Dispatcher<Queue>()
+	fileprivate var onTimeDispatcher              = Dispatcher<TimeInterval>()
+	fileprivate var onSecondsSavedDispatcher      = Dispatcher<TimeInterval>()
+	fileprivate var onDurationSavedDispatcher     = Dispatcher<TimeInterval>()
+	fileprivate var onDownloadProgressDispatcher  = Dispatcher<Float>()
+	fileprivate var onTimeOffsetDispatcher        = Dispatcher<TimeInterval>()
+	fileprivate var onItemFinishedDispatcher      = Dispatcher<SAPLayerItemRef>()
+	fileprivate var onLeftChannelDispatcher       = Dispatcher<Float?>()
+	fileprivate var onRightChannelDispatcher      = Dispatcher<Float?>()
+	fileprivate var onBufferDispatcher            = Dispatcher<AVAudioPCMBuffer?>()
+	fileprivate var onDownloadCompletedDispatcher = Dispatcher<SAPlayer>()
+	fileprivate var onSmartSpeedDispatcher        = Dispatcher<Bool>()
+	fileprivate var onSilenceSpeedUpDispatcher    = Dispatcher<Bool>()
 }
 
 //onEvents reactions
 extension SAPlayer {
 
-	fileprivate func onVolume() {
+	fileprivate func onTimeOfset() {
+		onTimeDispatcher.dispatch(timeOffset)
+	}
 
+	fileprivate func onVolume() {
+		onVolumeDispatcher.dispatch(volume)
 	}
 
 	fileprivate func onRate() {
-
+		onRateDispatcher.dispatch(rate)
 	}
 
 	fileprivate func onPitch() {
-
+		onPitchDispatcher.dispatch(pitch)
 	}
 
 	fileprivate func onState() {
-
+		onStateDispatcher.dispatch(state)
 	}
 
 	fileprivate func onCurrentItem() {
@@ -593,7 +725,7 @@ extension SAPlayer {
 
 	}
 
-	fileprivate func onItemFinished() {
+	fileprivate func onItemFinished(_ item: SAPLayerItemRef) {
 
 	}
 
