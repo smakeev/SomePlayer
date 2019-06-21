@@ -98,6 +98,10 @@ public class ID3Parser: NSObject {
 		task.resume()
 	}
 
+	deinit {
+		print("!!! DEINIT PARSERID3")
+	}
+
 	fileprivate var task: URLSessionDataTask?
 	fileprivate lazy var session: URLSession = {
 		return URLSession(configuration: .default, delegate: self, delegateQueue: nil)
@@ -143,6 +147,14 @@ extension ID3Parser: URLSessionDataDelegate {
 	}
 
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+
+		guard data.count > 3 else {
+			DispatchQueue.main.async {
+				self.isID3     = false
+				self.inParsing = false
+			}
+			return
+		}
 
 		//String(data: data)
 		if !String(decoding:data[0...3], as: UTF8.self).hasPrefix("ID3") {
@@ -195,6 +207,6 @@ extension ID3Parser: URLSessionDataDelegate {
 	}
 
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-
+		session.invalidateAndCancel()
 	}
 }
