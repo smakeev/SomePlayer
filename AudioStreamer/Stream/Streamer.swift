@@ -67,6 +67,7 @@ open class Streamer: Streaming {
 			engine.mainMixerNode.outputVolume = newValue
 		}
 	}
+	var scheduleNextBufferTimer: Timer?
 	var volumeRampTimer: Timer?
 	var volumeRampTargetValue: Float?
 	
@@ -101,8 +102,11 @@ open class Streamer: Streaming {
 		
 		/// Use timer to schedule the buffers (this is not ideal, wish AVAudioEngine provided a pull-model for scheduling buffers)
 		let interval = 1 / (readFormat.sampleRate / Double(readBufferSize))
-		let timer = Timer(timeInterval: interval / 2, repeats: true) {
+		scheduleNextBufferTimer = Timer(timeInterval: interval / 2, repeats: true) {
 			[weak self] _ in
+			guard self != nil else {
+				return
+			}
 			guard self?.state != .stopped else {
 				return
 			}
@@ -114,7 +118,9 @@ open class Streamer: Streaming {
 			self?.handleTimeUpdate()
 			self?.notifyTimeUpdated()
 		}
-		RunLoop.current.add(timer, forMode: .common)
+		if let timer = scheduleNextBufferTimer {
+			RunLoop.current.add(timer, forMode: .common)
+		}
 	}
 	
 	/// Subclass can override this to attach additional nodes to the engine before it is prepared. Default implementation attaches the `playerEngineNode`. Subclass should call super or be sure to attach the playerEngineNode.
@@ -131,6 +137,7 @@ open class Streamer: Streaming {
 
 	deinit{
 		print("!!!! DEINIT")
+		scheduleNextBufferTimer?.invalidate()
 	}
 
 	func reset() {
@@ -145,8 +152,9 @@ open class Streamer: Streaming {
 		// Create a new parser
 		do {
 			parser = try Parser()
-			parser?.formatObserver = { format in
-				self.delegate?.streamer(self, willProvideFormat: format)
+			parser?.formatObserver = { [weak self] format in
+				guard let validSelf = self else { return }
+				self?.delegate?.streamer(validSelf, willProvideFormat: format)
 			}
 		} catch {
 			os_log("Failed to create parser: %@", log: Streamer.logger, type: .error, error.localizedDescription)
@@ -300,19 +308,21 @@ open class Streamer: Streaming {
 	
 	func swellVolume(to newVolume: Float, duration: TimeInterval = 0.5) {
 		volumeRampTargetValue = newVolume
-		DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(duration*1000/2))) { [unowned self] in
-			self.volumeRampTimer?.invalidate()
-			let timer = Timer(timeInterval: Double(Float((duration/2.0))/(newVolume * 10)), repeats: true) { timer in
-				if self.volume != newVolume {
-					self.volume = min(newVolume, self.volume + 0.1)
+		DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(duration*1000/2))) { [weak self] in
+			guard let validSelf = self else { return }
+			validSelf.volumeRampTimer?.invalidate()
+			let timer = Timer(timeInterval: Double(Float((duration/2.0))/(newVolume * 10)), repeats: true) { [weak self] timer in
+				guard let validSelf = self else { return }
+				if validSelf.volume != newVolume {
+					validSelf.volume = min(newVolume, validSelf.volume + 0.1)
 				} else {
-					self.volumeRampTimer = nil
-					self.volumeRampTargetValue = nil
+					validSelf.volumeRampTimer = nil
+					validSelf.volumeRampTargetValue = nil
 					timer.invalidate()
 				}
 			}
 			RunLoop.current.add(timer, forMode: .common)
-			self.volumeRampTimer = timer
+			validSelf.volumeRampTimer = timer
 		}
 	}
 	

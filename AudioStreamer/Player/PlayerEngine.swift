@@ -172,7 +172,10 @@ open class SomePlayerEngine: NSObject {
 	public internal(set) var hasError:       Bool = false
 	
 	public fileprivate(set) var resumableData: ResumableData?
-	
+
+	deinit {
+		print("!!! deiniting engine")
+	}
 	
 	public func resume() {
 		guard !fileDownloaded else { return }

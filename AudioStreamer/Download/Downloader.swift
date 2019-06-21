@@ -12,6 +12,11 @@ import os.log
 /// The `Downloader` is a concrete implementation of the `Downloading` protocol
 /// using `URLSession` as the backing HTTP/HTTPS implementation.
 public class Downloader: NSObject, Downloading {
+
+	deinit {
+		print("!!! downloader deinit")
+	}
+
 	static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Downloader")
 	
 	// MARK: - Singleton
