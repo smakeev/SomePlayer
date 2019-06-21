@@ -20,9 +20,15 @@ public class ID3Parser: NSObject {
 	var avassetGet: Bool = false {
 		didSet {
 			if !inParsing {
-				handler?(asset, headerSize)
-				handler = nil
-				session.invalidateAndCancel()
+				DispatchQueue.global().async {
+					self.handler?(self.asset, self.headerSize)
+					DispatchQueue.main.async {
+
+						self.handler = nil
+						self.session.invalidateAndCancel()
+					}
+				}
+
 			}
 		}
 	}
@@ -30,9 +36,13 @@ public class ID3Parser: NSObject {
 	var inParsing:  Bool = true {
 		didSet {
 			if avassetGet {
-				handler?(asset, headerSize)
-				handler = nil
-				session.invalidateAndCancel()
+				DispatchQueue.global().async {
+					self.handler?(self.asset, self.headerSize)
+					DispatchQueue.main.async {
+						self.handler = nil
+						self.session.invalidateAndCancel()
+					}
+				}
 			}
 		}
 	}
