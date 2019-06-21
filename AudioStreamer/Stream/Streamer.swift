@@ -408,9 +408,8 @@ open class Streamer: Streaming {
 		guard let currentTime = currentTime else {
 			return
 		}
+		guard let duration = self.duration else { return }
 
-		let duration = self.duration ?? 0
-		
 		if currentTime >= duration {
 			try? seek(to: 0)
 			pause()
