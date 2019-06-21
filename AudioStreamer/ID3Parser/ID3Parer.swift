@@ -22,6 +22,7 @@ public class ID3Parser: NSObject {
 			if !inParsing {
 				handler?(asset, headerSize)
 				handler = nil
+				session.invalidateAndCancel()
 			}
 		}
 	}
@@ -31,6 +32,7 @@ public class ID3Parser: NSObject {
 			if avassetGet {
 				handler?(asset, headerSize)
 				handler = nil
+				session.invalidateAndCancel()
 			}
 		}
 	}
@@ -40,6 +42,8 @@ public class ID3Parser: NSObject {
 		didSet {
 			if isQuick {
 				self.quickHandler?(self.isID3 ?? false)
+				self.quickHandler = nil
+				session.invalidateAndCancel()
 			}
 		}
 	}
@@ -207,6 +211,8 @@ extension ID3Parser: URLSessionDataDelegate {
 	}
 
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-		session.invalidateAndCancel()
+		DispatchQueue.global().async {
+			session.invalidateAndCancel()
+		}
 	}
 }
