@@ -298,14 +298,18 @@ open class SomePlayerEngine: NSObject {
 						self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
 					}
 					handler()
+					self.isInitialized = true
 					self.state = .ready
 				}
 			}
 		}
 	}
-	
+
+	public internal(set) var isInitialized: Bool = false
+
 	public func openRemote(_ url: URL) {
-		isLocal = false
+		isInitialized = false
+		isLocal       = false
 		streamer.reset()
 		fileDownloaded = false
 		hasError = false
@@ -316,7 +320,8 @@ open class SomePlayerEngine: NSObject {
 	}
 
 	public func openLocal(_  url: URL) {
-		isLocal = true
+		isInitialized = false
+		isLocal       = true
 		streamer.reset()
 		fileDownloaded = true
 		hasError = false
@@ -546,7 +551,9 @@ extension SomePlayerEngine: StreamingDelegate {
 		case .playing:
 			self.state = .playing
 		case .stopped:
-			self.state = .ready
+			if isInitialized {
+				self.state = .ready
+			}
 		}
 		let mainMixer = streamer.engine.mainMixerNode
 		if state == .playing {
