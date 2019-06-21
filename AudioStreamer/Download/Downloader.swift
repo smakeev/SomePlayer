@@ -17,6 +17,11 @@ public class Downloader: NSObject, Downloading {
 		print("!!! downloader deinit")
 	}
 
+	override init() {
+		super.init()
+		session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+	}
+
 	static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Downloader")
 	
 	// MARK: - Singleton
@@ -29,15 +34,13 @@ public class Downloader: NSObject, Downloading {
 	/// A `Bool` indicating whether the session should use the shared URL cache or not. Really useful for testing, but in production environments you probably always want this to `true`. Default is true.
 	public var useCache = true {
 		didSet {
-			session.configuration.urlCache = useCache ? URLCache.shared : nil
+			session?.configuration.urlCache = useCache ? URLCache.shared : nil
 		}
 	}
 	
 	/// The `URLSession` currently being used as the HTTP/HTTPS implementation for the downloader.
-	fileprivate lazy var session: URLSession = {
-		return URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-	}()
-	
+	internal var session: URLSession?
+
 	/// A `URLSessionDataTask` representing the data operation for the current `URL`.
 	internal var task: URLSessionDataTask?
 	
@@ -71,7 +74,12 @@ public class Downloader: NSObject, Downloading {
 				totalBytesReceived = 0
 				var request = URLRequest(url: url)
 				//todo add headers if needed
-				task = session.dataTask(with: request)
+				if let session = session {
+					task = session.dataTask(with: request)
+				} else {
+					self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+					task = session!.dataTask(with: request)
+				}
 			} else {
 				task = nil
 			}
@@ -107,7 +115,12 @@ public class Downloader: NSObject, Downloading {
 		//            headers["If-Range"] = resumableData.validator
 		//        }
 		request.allHTTPHeaderFields = headers
-		task = session.dataTask(with: request)
+		if let session = session {
+			task = session.dataTask(with: request)
+		} else {
+			self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+			task = session!.dataTask(with: request)
+		}
 		start()
 	}
 	
