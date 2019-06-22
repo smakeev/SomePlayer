@@ -396,6 +396,12 @@ open class SomePlayerEngine: NSObject {
 			seek(to: hasDuration)
 			return
 		}
+		
+		if percent == 1 {
+			self.streamer.stop()
+			self.state = .ended
+			return
+		}
 		//make offset and restart downloading
 		offset = Int64(Float(totalSize) * percent) + headerSize
 		resumableData = ResumableData(offset: offset)

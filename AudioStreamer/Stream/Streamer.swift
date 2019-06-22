@@ -26,6 +26,7 @@ open class Streamer: Streaming {
 	}
 	weak public var delegate: StreamingDelegate?
 	public internal(set) var duration: TimeInterval?
+	
 	public lazy var downloader: Downloading = {
 		let downloader = Downloader()
 		downloader.delegate = self
