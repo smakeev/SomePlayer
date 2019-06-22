@@ -130,7 +130,11 @@ open class SomePlayerEngine: NSObject {
 		}
 	}
 	
-	public internal(set) var rangeHeader:    Bool  = false
+	public internal(set) var rangeHeader:    Bool  = false {
+		didSet {
+			print("!!! rangeHeader: \(rangeHeader)")
+		}
+	}
 	public internal(set) var totalSize:      Int64 = 0 {
 		didSet {
 			self.aboutBitrate = (Double(self.totalSize - self.headerSize) * 8) / self.duration

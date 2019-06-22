@@ -51,9 +51,11 @@ extension Downloader: URLSessionDataDelegate {
 
 		delegate?.download(self, completedWithError: errorToReturn, bytesReceived: totalBytesReceived, dataTask: task)
 		completionHandler?(errorToReturn)
-		session.invalidateAndCancel()
-		if self.session === session {
-			self.session = nil
+		DispatchQueue.main.async {
+			session.invalidateAndCancel()
+			if self.session === session {
+				self.session = nil
+			}
 		}
 	}
 }

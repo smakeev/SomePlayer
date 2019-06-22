@@ -28,7 +28,6 @@ public class ID3Parser: NSObject {
 						self.session.invalidateAndCancel()
 					}
 				}
-
 			}
 		}
 	}
@@ -216,12 +215,13 @@ extension ID3Parser: URLSessionDataDelegate {
 //			//get it's size
 //		}
 		DispatchQueue.main.async {
+			self.task?.cancel()
 			self.inParsing = false
 		}
 	}
 
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-		DispatchQueue.global().async {
+		DispatchQueue.main.async {
 			session.invalidateAndCancel()
 		}
 	}

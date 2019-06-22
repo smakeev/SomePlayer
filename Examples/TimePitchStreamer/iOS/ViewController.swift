@@ -82,13 +82,13 @@ class ViewController: UIViewController {
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3" //1 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_2MG.mp3" //2 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_5MG.mp3" // MG
-		let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
+		//let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //podcast
 
 
 		//let str = "http://www.pusware.com/gobbet/gop1111.mp3"
 		//let str = "https://dts.podtrac.com/redirect.mp3/media.blubrry.com/99percentinvisible/dovetail.prxu.org/96/e8167dd5-7850-4de3-80c9-b51f39dbc087/01_356_The_Automat_pt01.mp3" //VBR
 
-		//let str = "http://media.blubrry.com/shortstacks/continuum.umn.edu/media/Truth-Tweets-and-Tomorrows.mp3"//no range
+		let str = "http://media.blubrry.com/shortstacks/continuum.umn.edu/media/Truth-Tweets-and-Tomorrows.mp3"//no range
 
 		//let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
 
@@ -102,9 +102,9 @@ class ViewController: UIViewController {
 		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
 
 		let url = URL(string: str)!
-		ID3Parser.isGoodForStream(url) {
-			print("!!! static isGood: \($0)")
-		}
+//		ID3Parser.isGoodForStream(url) {
+//			print("!!! static isGood: \($0)")
+//		}
 		playerEngine.openRemote(url)
 
 		playerEngine.addRateObserver(withId: "controller") { value in

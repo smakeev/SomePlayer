@@ -99,8 +99,15 @@ public class Downloader: NSObject, Downloading {
 		case .completed, .started:
 			return
 		default:
-			state = .started
-			task.resume()
+			if session != nil {
+				state = .started
+				task.resume()
+			} else if let validUrl = url {
+				self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+				self.task = session!.dataTask(with: validUrl)
+				state = .started
+				self.task!.resume()
+			}
 		}
 	}
 	
