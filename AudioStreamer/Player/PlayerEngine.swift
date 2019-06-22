@@ -76,6 +76,12 @@ open class SomePlayerEngine: NSObject {
 				return
 			}
 
+			if isInitialized {
+				if self.state == .initializing {
+					self.state = .ready
+				}
+			}
+
 			let framesPerPacket = format.streamDescription.pointee.mFramesPerPacket
 			let bytesPerPacket = format.streamDescription.pointee.mBytesPerPacket
 			//let packets = totalSize / bytesPerPacket
@@ -176,10 +182,6 @@ open class SomePlayerEngine: NSObject {
 	public internal(set) var hasError:       Bool = false
 	
 	public fileprivate(set) var resumableData: ResumableData?
-
-	deinit {
-		print("!!! deiniting engine")
-	}
 	
 	public func resume() {
 		guard !fileDownloaded else { return }
@@ -304,9 +306,9 @@ open class SomePlayerEngine: NSObject {
 					if let validAsset = asset {
 						self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
 					}
-					handler()
+					
 					self.isInitialized = true
-					self.state = .ready
+					handler()
 				}
 			}
 		}
@@ -353,7 +355,12 @@ open class SomePlayerEngine: NSObject {
 		do{
 			amplitudes = [Float]()
 			self.rate = self.baseRate
-			try streamer.seek(to: time)
+			
+			if time > hasDuration {
+				try streamer.seek(to: hasDuration)
+			} else {
+				try streamer.seek(to: time)
+			}
 		}
 		catch {
 			///
@@ -540,17 +547,21 @@ extension SomePlayerEngine: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
 		hasError = false
 		hasBytes += bytes
-
 		if progress == 1.0 && offset == 0 {
 			fileDownloaded = true
 		}
-		let totalProgress = Float(hasBytes) / Float(totalSize)
-		delegate?.playerEngine(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
+		
+		//if server does not provide total size we can't get right progress.
+		if progress >= 0 {
+			let totalProgress = Float(hasBytes) / Float(totalSize)
+			delegate?.playerEngine(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
+		}
 		delegate?.playerEngine(self, updatedDuration: duration)
 	}
 
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
 		amplitudes = [Float]()
+		print("!!! streamer state: \(state)")
 		self.rate = self.baseRate
 		switch state {
 		case .paused:

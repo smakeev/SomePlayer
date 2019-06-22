@@ -18,16 +18,14 @@ public class Parser: Parsing {
     
     // MARK: - Parsing props
 
-	deinit {
-		print("!!! parser deinit")
-	}
-
 	public var formatObserver: ((AVAudioFormat?) -> Void)? = nil
 	
     public internal(set) var dataFormat: AVAudioFormat? {
     	didSet {
     		//inform delegate
-    		formatObserver?(dataFormat)
+    		DispatchQueue.main.async {
+    			self.formatObserver?(self.dataFormat)
+			}
 		}
 	}
     public internal(set) var packets = [(Data, AudioStreamPacketDescription?)]()

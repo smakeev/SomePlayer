@@ -111,10 +111,6 @@ public class ID3Parser: NSObject {
 		task.resume()
 	}
 
-	deinit {
-		print("!!! DEINIT PARSERID3")
-	}
-
 	fileprivate var task: URLSessionDataTask?
 	fileprivate lazy var session: URLSession = {
 		return URLSession(configuration: .default, delegate: self, delegateQueue: nil)

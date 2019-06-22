@@ -45,7 +45,6 @@ extension ViewController: SomeplayerEngineDelegate {
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
 		//  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
-
 		progressSlider.progress = progress
 	}
 
@@ -57,8 +56,12 @@ extension ViewController: SomeplayerEngineDelegate {
 			playButton.setImage(#imageLiteral(resourceName: "pause"), for: .normal)
 		case .paused, .ended:
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
+		case .ready:
+			playButton.isEnabled = true
+			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
 		default:
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
+			playButton.isEnabled = false
 		}
 	}
 
@@ -102,7 +105,6 @@ extension ViewController: SomeplayerEngineDelegate {
 		}
 
 		durationTimeLabel.isEnabled = true
-		playButton.isEnabled = true
 		progressSlider.isEnabled = true
 	}
 	

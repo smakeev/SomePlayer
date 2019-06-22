@@ -13,10 +13,6 @@ import os.log
 /// using `URLSession` as the backing HTTP/HTTPS implementation.
 public class Downloader: NSObject, Downloading {
 
-	deinit {
-		print("!!! downloader deinit")
-	}
-
 	override init() {
 		super.init()
 		session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
@@ -122,12 +118,8 @@ public class Downloader: NSObject, Downloading {
 		//            headers["If-Range"] = resumableData.validator
 		//        }
 		request.allHTTPHeaderFields = headers
-		if let session = session {
-			task = session.dataTask(with: request)
-		} else {
-			self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-			task = session!.dataTask(with: request)
-		}
+		self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+		task = session!.dataTask(with: request)
 		start()
 	}
 	
