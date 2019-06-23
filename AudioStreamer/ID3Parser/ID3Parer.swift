@@ -12,7 +12,7 @@ import AVFoundation
 
 public class ID3Parser: NSObject {
 
-	public static func isGoodForStream(_ url: URL, handler: @escaping (Bool) -> Void) {
+	public static func isGoodForStream(_ url: URL, handler: @escaping (Bool, Bool) -> Void) {
 		let parser = ID3Parser(url, quickTest: true)
 		parser.quickTest(handler)
 	}
@@ -50,12 +50,17 @@ public class ID3Parser: NSObject {
 	var isID3: Bool? {
 		didSet {
 			if isQuick {
-				self.quickHandler?(self.isID3 ?? false)
+				let isGoodForStream = self.isRangeAvailable && self.isTotalAvailable && (self.isID3 ?? false)
+				print("!!! \(self.isRangeAvailable), \(self.isTotalAvailable), \(self.isID3 ?? false)")
+				self.quickHandler?(self.isID3 ?? false, isGoodForStream)
 				self.quickHandler = nil
 				session.invalidateAndCancel()
 			}
 		}
 	}
+	
+	var isTotalAvailable: Bool = false
+	var isRangeAvailable: Bool = false
 	
 	var asset: AVAsset?
 
@@ -71,9 +76,10 @@ public class ID3Parser: NSObject {
 	}
 
 	private var handler:      ((AVAsset?, Int64?) -> Void)?
-	private var quickHandler: ((Bool) -> Void)?
+	//1st = isID3, 2nd = isGoodForStream
+	private var quickHandler: ((Bool, Bool) -> Void)?
 
-	func quickTest(_ handler: @escaping (Bool) -> Void) {
+	func quickTest(_ handler: @escaping (Bool, Bool) -> Void) {
 		self.quickHandler = handler
 		DispatchQueue.global().async {
 			self.prepare()
@@ -128,7 +134,6 @@ extension ID3Parser {
 		var request = URLRequest(url: url)
 		var headers = request.allHTTPHeaderFields ?? [:]
 		headers["Range"] = "bytes=0-\(dataLimit)"
-
 		request.allHTTPHeaderFields = headers
 		task = session.dataTask(with: request)
 	}
@@ -152,6 +157,14 @@ extension ID3Parser {
 extension ID3Parser: URLSessionDataDelegate {
 
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+		if response.expectedContentLength > 0 {
+			isTotalAvailable = true
+		}
+		if let httpResponse = response as? HTTPURLResponse {
+			if let _ = httpResponse.allHeaderFields["Accept-Ranges"] as? String {
+				isRangeAvailable = true
+			}
+		}
 		completionHandler(.allow)
 	}
 

@@ -137,7 +137,6 @@ open class Streamer: Streaming {
 	// MARK: - Reset
 
 	deinit{
-		print("!!!! DEINIT")
 		scheduleNextBufferTimer?.invalidate()
 	}
 

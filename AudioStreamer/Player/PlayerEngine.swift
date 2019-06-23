@@ -123,7 +123,7 @@ open class SomePlayerEngine: NSObject {
 	
 	public internal(set) var rangeHeader:    Bool  = false {
 		didSet {
-			print("!!! rangeHeader: \(rangeHeader)")
+
 		}
 	}
 	public internal(set) var totalSize:      Int64 = 0 {
@@ -554,7 +554,6 @@ extension SomePlayerEngine: StreamingDelegate {
 
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
 		amplitudes = [Float]()
-		print("!!! streamer state: \(state)")
 		self.rate = self.baseRate
 		switch state {
 		case .paused:
