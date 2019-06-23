@@ -69,26 +69,11 @@ open class SomePlayerEngine: NSObject {
 	
 	public internal(set) var format: AVAudioFormat? {
 		didSet {
-			//calc est duration.
-			guard totalSize > 0 else { return }
-			guard let format = format else {
-				estimatedDuration = 0
-				return
-			}
-
-			if isInitialized {
+			if isInitialized && format != nil {
 				if self.state == .initializing {
 					self.state = .ready
 				}
 			}
-
-			let framesPerPacket = format.streamDescription.pointee.mFramesPerPacket
-			let bytesPerPacket = format.streamDescription.pointee.mBytesPerPacket
-			//let packets = totalSize / bytesPerPacket
-			//let frames = Int64(framesPerPacket) * packets
-			
-			//estimatedDuration = TimeInterval(frames) / TimeInterval(format.sampleRate)
-			//print(estimatedDuration.toMMSS())
 		}
 	}
 
@@ -318,6 +303,7 @@ open class SomePlayerEngine: NSObject {
 
 	public func openRemote(_ url: URL) {
 		isInitialized = false
+		format = nil
 		isLocal       = false
 		streamer.reset()
 		fileDownloaded = false
@@ -330,6 +316,7 @@ open class SomePlayerEngine: NSObject {
 
 	public func openLocal(_  url: URL) {
 		isInitialized = false
+		format = nil
 		isLocal       = true
 		streamer.reset()
 		fileDownloaded = true
