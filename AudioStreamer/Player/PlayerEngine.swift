@@ -575,7 +575,7 @@ extension SomePlayerEngine: StreamingDelegate {
 		case .playing:
 			self.state = .playing
 		case .stopped:
-			if isInitialized {
+			if isInitialized && format != nil {
 				self.state = .ready
 			}
 		}
