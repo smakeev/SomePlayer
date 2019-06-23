@@ -53,13 +53,17 @@ extension ViewController: SomeplayerEngineDelegate {
 
 		switch state {
 		case .playing:
+			progressSlider.isEnabled = true
 			playButton.setImage(#imageLiteral(resourceName: "pause"), for: .normal)
 		case .paused, .ended:
+			progressSlider.isEnabled = true
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
 		case .ready:
+			progressSlider.isEnabled = true
 			playButton.isEnabled = true
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
 		default:
+			progressSlider.isEnabled = false
 			playButton.setImage(#imageLiteral(resourceName: "play"), for: .normal)
 			playButton.isEnabled = false
 		}
@@ -105,7 +109,6 @@ extension ViewController: SomeplayerEngineDelegate {
 		}
 
 		durationTimeLabel.isEnabled = true
-		progressSlider.isEnabled = true
 	}
 	
 	func playerEngine(_ playerEngine: SomePlayerEngine, savedSeconds: TimeInterval) {
