@@ -99,6 +99,10 @@ open class SomePlayerEngine: NSObject {
 				self.delegate?.playerEngine(self, changedState: state)
 			}
 			print("!!!! \(state)")
+
+			if state == .initializing {
+				streamer.totalDuration = 0
+			}
 		}
 	}
 
@@ -156,6 +160,7 @@ open class SomePlayerEngine: NSObject {
 			} else {
 				timeOffset = 0
 			}
+			streamer.totalTimeOffset = timeOffset
 		}
 	}
 	
@@ -291,7 +296,8 @@ open class SomePlayerEngine: NSObject {
 					if let validAsset = asset {
 						self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
 					}
-					
+					self.streamer.totalDuration = self.estimatedDuration
+
 					self.isInitialized = true
 					handler()
 				}

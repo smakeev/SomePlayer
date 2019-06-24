@@ -25,7 +25,9 @@ open class Streamer: Streaming {
 		return currentTime + currentTimeOffset
 	}
 	weak public var delegate: StreamingDelegate?
-	public internal(set) var duration: TimeInterval?
+	public internal(set) var duration:        TimeInterval?
+	public internal(set) var totalDuration:   TimeInterval = 0
+	public internal(set) var totalTimeOffset: TimeInterval = 0
 	
 	public lazy var downloader: Downloading = {
 		let downloader = Downloader()
@@ -420,7 +422,7 @@ open class Streamer: Streaming {
 		}
 		guard let duration = self.duration else { return }
 
-		if currentTime >= duration {
+		if currentTime + totalTimeOffset >= max(duration, totalDuration) {
 			try? seek(to: 0)
 			pause()
 			//inform that file finished
