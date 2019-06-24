@@ -46,7 +46,7 @@ open class SomePlayerEngine: NSObject {
 		}
 	}
 
-	public enum SilenceHandlingType {
+	public enum SilenceHandlingType: Int {
 		case none
 		case smart
 		case speedUp
