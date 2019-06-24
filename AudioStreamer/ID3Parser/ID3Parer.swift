@@ -17,6 +17,8 @@ public class ID3Parser: NSObject {
 		parser.quickTest(handler)
 	}
 
+	var dataReceived = false
+
 	var avassetGet: Bool = false {
 		didSet {
 			if !inParsing {
@@ -172,6 +174,7 @@ extension ID3Parser: URLSessionDataDelegate {
 
 		guard data.count > 3 else {
 			DispatchQueue.main.async {
+				self.dataReceived = true
 				self.isID3     = false
 				self.inParsing = false
 			}
@@ -181,15 +184,22 @@ extension ID3Parser: URLSessionDataDelegate {
 		//String(data: data)
 		if !String(decoding:data[0...3], as: UTF8.self).hasPrefix("ID3") {
 			DispatchQueue.main.async {
+				self.dataReceived = true
 				self.isID3     = false
 				self.inParsing = false
 			}
 			return
 		} else if isQuick {
 			DispatchQueue.main.async {
+				self.dataReceived = true
 				self.isID3 = true
+				self.inParsing = false
 			}
 			return
+		} else {
+			DispatchQueue.main.async {
+				self.dataReceived = true
+			}
 		}
 
 		//get version
@@ -232,6 +242,11 @@ extension ID3Parser: URLSessionDataDelegate {
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
 		DispatchQueue.main.async {
 			session.invalidateAndCancel()
+			if self.isQuick && self.inParsing && !self.dataReceived && self.isID3 == nil {
+				//we had no data
+				self.quickHandler?(false, false)
+				self.quickHandler = nil
+			}
 		}
 	}
 }
