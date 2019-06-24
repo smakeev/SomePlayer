@@ -17,6 +17,7 @@ public class ID3Parser: NSObject {
 		parser.quickTest(handler)
 	}
 
+	var needsAsset = true
 	var dataReceived = false
 
 	var avassetGet: Bool = false {
@@ -91,8 +92,14 @@ public class ID3Parser: NSObject {
 
 	func parse( handler: @escaping (AVAsset?, Int64?) -> Void) {
 		self.handler = handler
-		DispatchQueue.global().async {
-			self.asset = AVURLAsset(url: self.url)
+		if needsAsset {
+			DispatchQueue.global().async {
+				self.asset = AVURLAsset(url: self.url)
+				DispatchQueue.main.async {
+					self.avassetGet = true
+				}
+			}
+		} else {
 			DispatchQueue.main.async {
 				self.avassetGet = true
 			}

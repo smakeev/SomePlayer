@@ -124,7 +124,17 @@ open class SomePlayerEngine: NSObject {
 			self.delegate?.playerEngine(self, updatedDuration: self.duration)
 		}
 	}
-	
+
+	public internal(set) var insiderInfoDuration: TimeInterval = 0
+	fileprivate var needsAsset = true
+
+	public func noAssetNeeded(duration: TimeInterval) {
+		self.insiderInfoDuration = duration
+		if duration > 0 {
+			needsAsset = false
+		}
+	}
+
 	public internal(set) var rangeHeader:    Bool  = false {
 		didSet {
 
@@ -239,12 +249,15 @@ open class SomePlayerEngine: NSObject {
 	private var id3Parser: ID3Parser?
 	private func handleMeta(_ url: URL, handler: @escaping ()-> Void) {
 		self.state = .initializing
+		let assetNeeded = self.needsAsset
 		DispatchQueue.global().async {
 			if self.id3Parser != nil {
 				self.id3Parser?.cancel()
 			}
 			self.id3Parser = ID3Parser(url)
+			self.id3Parser?.needsAsset = assetNeeded
 			self.id3Parser?.parse { asset, headerSize in
+
 				if let asset = asset {
 				
 					DispatchQueue.main.async {
@@ -295,6 +308,8 @@ open class SomePlayerEngine: NSObject {
 				DispatchQueue.main.async {
 					if let validAsset = asset {
 						self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
+					} else {
+						self.estimatedDuration = self.insiderInfoDuration
 					}
 					self.streamer.totalDuration = self.estimatedDuration
 
@@ -308,6 +323,11 @@ open class SomePlayerEngine: NSObject {
 	public internal(set) var isInitialized: Bool = false
 
 	public func openRemote(_ url: URL) {
+		let oldDelegate = delegate
+		delegate = nil
+
+		needsAsset = true
+		insiderInfoDuration = 0
 		isInitialized = false
 		format = nil
 		isLocal       = false
@@ -315,12 +335,18 @@ open class SomePlayerEngine: NSObject {
 		fileDownloaded = false
 		hasError = false
 		rangeHeader = false
+		self.delegate = oldDelegate
 		handleMeta(url) {
 			self.url = url
 		}
 	}
 
 	public func openLocal(_  url: URL) {
+		let oldDelegate = delegate
+		delegate = nil
+
+		needsAsset = true
+		insiderInfoDuration = 0
 		isInitialized = false
 		format = nil
 		isLocal       = true
@@ -328,6 +354,7 @@ open class SomePlayerEngine: NSObject {
 		fileDownloaded = true
 		hasError = false
 		rangeHeader = false
+		self.delegate = oldDelegate
 		handleMeta(url) {
 			self.url = url
 		}
