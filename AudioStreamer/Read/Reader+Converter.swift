@@ -38,6 +38,7 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     //
     let packetIndex = Int(reader.currentPacket)
     let packets = reader.parser.packets
+	print("!!! schedule \(packetIndex) of \(packets.count)")
     let isEndOfData = packetIndex >= packets.count - 1
     if isEndOfData {
         if reader.parser.isParsingComplete {
