@@ -505,13 +505,24 @@ open class SomePlayerEngine: NSObject {
 		
 		if silenceHandlingType == .smart {
 			guard let average = self.averagePowerForChannel0 else { return }
+			guard !average.isNaN && average.isFinite else { return }
+
 			amplitudes.append(average + 120)
 			guard amplitudes.count > 10 else { return }
+			amplitudes.remove(at: 0)
+			var result = baseRate
 			if self.amplitudes.last! > 50 {
-				self.rate = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.01
+				if self.amplitudes.last! > 100 {
+					result = baseRate
+				} else {
+					result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.01
+				}
 			} else {
-				self.rate = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.02
+				result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.02
 			}
+
+			self.rate = result
+
 			informForsavedTime()
 			return
 		}
