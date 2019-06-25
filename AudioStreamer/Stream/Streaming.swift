@@ -70,7 +70,7 @@ public protocol Streaming: class {
     ///
     /// - Parameter time: A `TimeInterval` representing the new desired play time in seconds.
     /// - Throws: An `Error` describing the reason the seek failed. Concrete classes can use typed-errors to give a specific reason.
-    func seek(to time: TimeInterval) throws
+    func seek(to time: TimeInterval, internalUse: Bool) throws
     
 }
 

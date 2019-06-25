@@ -259,9 +259,10 @@ open class Streamer: Streaming {
 		swellVolume(to: lastVolume)
 	}
 	
-	public func seek(to time: TimeInterval) throws {
+	public func seek(to time: TimeInterval, internalUse: Bool = false) throws {
 		os_log("%@ - %d [%.1f]", log: Streamer.logger, type: .debug, #function, #line, time)
-
+		lastSteppedPacket = 0
+		
 		if isLocal {
 			seekLocal(to: time)
 			return
@@ -304,8 +305,12 @@ open class Streamer: Streaming {
 		// Update the current time
 		delegate?.streamer(self, updatedCurrentTime: time)
 		
-		// After 250ms we restore the volume back to where it was
-		swellVolume(to: lastVolume)
+		if internalUse {
+			engine.mainMixerNode.outputVolume = lastVolume
+		} else {
+			// After 250ms we restore the volume back to where it was
+			swellVolume(to: lastVolume)
+		}
 	}
 	
 	func swellVolume(to newVolume: Float, duration: TimeInterval = 0.5) {
@@ -373,6 +378,7 @@ open class Streamer: Streaming {
 		}
 	}
 
+	private var lastSteppedPacket : Int = 0
 	func scheduleNextBuffer() {
 		guard let reader = reader else {
 			os_log("No reader yet...", log: Streamer.logger, type: .debug)
@@ -385,10 +391,22 @@ open class Streamer: Streaming {
 		
 		do {
 			let nextScheduledBuffer = try reader.read(readBufferSize)
+			if lastSteppedPacket == 0 {
+				lastSteppedPacket = Int(reader.currentPacket)
+			} else {
+				if Int(reader.currentPacket) - lastSteppedPacket > 10000 {
+					print("@@@ \(currentTime)")
+					lastSteppedPacket = 0
+					try self.seek(to: currentTime!, internalUse: true)
+					return
+				}
+			}
 			playerEngineNode.scheduleBuffer(nextScheduledBuffer)
 		} catch ReaderError.reachedEndOfFile {
 			os_log("Scheduler reached end of file", log: Streamer.logger, type: .debug)
 			isFileSchedulingComplete = true
+		} catch ReaderError.notEnoughData {
+			os_log("Scheduler reached end of parsed part", log: Streamer.logger, type: .debug)
 		} catch {
 			os_log("Cannot schedule buffer: %@", log: Streamer.logger, type: .debug, error.localizedDescription)
 		}
