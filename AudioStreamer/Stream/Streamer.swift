@@ -261,7 +261,6 @@ open class Streamer: Streaming {
 	
 	public func seek(to time: TimeInterval, internalUse: Bool = false) throws {
 		os_log("%@ - %d [%.1f]", log: Streamer.logger, type: .debug, #function, #line, time)
-		//lastSteppedPacket = 0
 		
 		if isLocal {
 			seekLocal(to: time)
