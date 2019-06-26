@@ -50,13 +50,17 @@ class ViewController: UIViewController {
 	var isSeeking = false
 	
 	// MARK: - View Lifecycle
-	
+
+	deinit {
+		removePlayerNotifications()
+	}
+
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		
 		// Setup the AVAudioSession and AVAudioEngine
 		setupAudioSession()
-		
+		configurePlayerNotifications()
 		// Reset the pitch and rate
 		resetPitch(self)
 		resetRate(self)
@@ -162,7 +166,19 @@ class ViewController: UIViewController {
 			os_log("Failed to activate audio session: %@", log: ViewController.logger, type: .default, #function, #line, error.localizedDescription)
 		}
 	}
-	
+
+	internal func configurePlayerNotifications() {
+
+		NotificationCenter.default.addObserver(self, selector: #selector(onInterruptionNotification(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(onMediaServicesWereResetNotification(_:)), name: AVAudioSession.mediaServicesWereLostNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(onMediaServicesWereResetNotification(_:)), name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(onRouteChangeNotification(_:)),name: AVAudioSession.routeChangeNotification, object: nil)
+	}
+
+	internal func removePlayerNotifications() {
+		NotificationCenter.default.removeObserver(self)
+	}
+
 	// MARK: - Playback
 	
 	@IBAction func togglePlayback(_ sender: UIButton) {
@@ -262,3 +278,57 @@ class ViewController: UIViewController {
 	
 }
 
+extension ViewController {
+
+	@objc fileprivate func onInterruptionNotification(_ notification: Notification) {
+
+		guard let interruptionTypeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else { return }
+		guard let interruptionType = AVAudioSession.InterruptionType.init(rawValue: interruptionTypeValue) else { return }
+
+		let shouldResume: Bool
+		if let interruptionOptionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt {
+			let interruptionOptions = AVAudioSession.InterruptionOptions.init(rawValue: interruptionOptionsValue)
+			shouldResume = interruptionOptions.contains(.shouldResume)
+		}
+		else {
+			shouldResume = false
+		}
+
+		let wasSuspended: Bool
+		if #available(iOS 10.3, *) {
+			let wasSuspendedNumber = notification.userInfo?[AVAudioSessionInterruptionWasSuspendedKey] as? NSNumber
+			wasSuspended = wasSuspendedNumber?.boolValue ?? false
+		} else {
+			wasSuspended = false
+		}
+
+		let isInterrupted: Bool
+		switch interruptionType {
+		case .began: isInterrupted = !wasSuspended
+		case .ended: isInterrupted = false
+		@unknown default:
+			isInterrupted = false
+		}
+
+		if isInterrupted {
+			self.playerEngine.pause()
+		}
+		else if shouldResume {
+			self.playerEngine.play()
+		}
+
+	}
+
+
+	@objc fileprivate func onMediaServicesWereResetNotification(_ notification: Notification) {
+		DispatchQueue.main.async {
+			self.playerEngine.pause()
+		}
+	}
+
+	@objc fileprivate func onRouteChangeNotification(_ notification: NSNotification) {
+		DispatchQueue.main.async {
+			self.playerEngine.pause()
+		}
+	}
+}
