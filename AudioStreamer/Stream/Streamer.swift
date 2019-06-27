@@ -395,10 +395,11 @@ open class Streamer: Streaming {
 		do {
 			let nextScheduledBuffer = try reader.read(readBufferSize)
 			lastSteppedPacket += 1
-			playerEngineNode.scheduleBuffer(nextScheduledBuffer) {
+			playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self] in
+				guard let validSelf = self else { return }
 				DispatchQueue.main.async {
-					self.lastSteppedPacket -= 1
-					print("@@@ \(self.lastSteppedPacket)")
+					validSelf.lastSteppedPacket -= 1
+					print("@@@ \(validSelf.lastSteppedPacket)")
 				}
 			}
 		} catch ReaderError.reachedEndOfFile {
