@@ -96,7 +96,9 @@ open class SomePlayerEngine: NSObject {
 	public fileprivate(set) var state: playerEngineState = .undefined {
 		didSet {
 			if state != oldValue {
-				self.delegate?.playerEngine(self, changedState: state)
+				DispatchQueue.main.async {
+					self.delegate?.playerEngine(self, changedState: self.state)
+				}
 			}
 			print("!!!! \(state)")
 
@@ -614,52 +616,55 @@ extension SomePlayerEngine: StreamingDelegate {
 			let bufferSize = streamer.readBufferSize
 			let format = mainMixer.outputFormat(forBus: 0)
 			print(format)
-			mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
-				self.lastBuffer = buffer
-				buffer.frameLength = bufferSize
-				
-				if buffer.format.channelCount > 0 {
-					let channelData = buffer.floatChannelData
-					if let validChannelData = channelData {
-						let channelDataValue = validChannelData[0]
-						let channelDataValueArray = stride(from: 0,
-														   to: Int(buffer.frameLength),
-														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
-						let rms = sqrt(part)
-						self.setAveragePowerCh0(20 * log10(rms))
-						
+			//DispatchQueue.main.async {
+				mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
+					self.lastBuffer = buffer
+					buffer.frameLength = bufferSize
+
+					if buffer.format.channelCount > 0 {
+						let channelData = buffer.floatChannelData
+						if let validChannelData = channelData {
+							let channelDataValue = validChannelData[0]
+							let channelDataValueArray = stride(from: 0,
+															   to: Int(buffer.frameLength),
+															   by: buffer.stride).map{ channelDataValue[$0] }
+							let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+							let rms = sqrt(part)
+							self.setAveragePowerCh0(20 * log10(rms))
+						} else {
+							self.setAveragePowerCh0(nil)
+							self.setAveragePowerCh1(nil)
+							return
+						}
 					} else {
 						self.setAveragePowerCh0(nil)
 						self.setAveragePowerCh1(nil)
 						return
 					}
-				} else {
-					self.setAveragePowerCh0(nil)
-					self.setAveragePowerCh1(nil)
-					return
-				}
-				
-				if buffer.format.channelCount > 1 {
-					let channelData = buffer.floatChannelData
-					if let validChannelData = channelData {
-						let channelDataValue = validChannelData[1]
-						let channelDataValueArray = stride(from: 0,
-														   to: Int(buffer.frameLength),
-														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
-						let rms = sqrt(part)
-						self.setAveragePowerCh1(20 * log10(rms))
-						
+
+					if buffer.format.channelCount > 1 {
+						let channelData = buffer.floatChannelData
+						if let validChannelData = channelData {
+							let channelDataValue = validChannelData[1]
+							let channelDataValueArray = stride(from: 0,
+															   to: Int(buffer.frameLength),
+															   by: buffer.stride).map{ channelDataValue[$0] }
+							let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+							let rms = sqrt(part)
+							self.setAveragePowerCh1(20 * log10(rms))
+
+						} else {
+							self.setAveragePowerCh1(nil)
+						}
 					} else {
-						self.setAveragePowerCh1(nil)
+						self.averagePowerForChannel0Toch1()
 					}
-				} else {
-					self.averagePowerForChannel0Toch1()
 				}
-			}
+			//}
 		} else {
-			mainMixer.removeTap(onBus: 0)
+			//DispatchQueue.main.async {
+				mainMixer.removeTap(onBus: 0)
+			//}
 		}
 	}
 	
