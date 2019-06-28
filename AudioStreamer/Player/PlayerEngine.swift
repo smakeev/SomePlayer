@@ -173,6 +173,7 @@ open class SomePlayerEngine: NSObject {
 				timeOffset = 0
 			}
 			streamer.totalTimeOffset = timeOffset
+			print("!!! new timeOffset: \(timeOffset)")
 		}
 	}
 	
@@ -327,7 +328,7 @@ open class SomePlayerEngine: NSObject {
 	public func openRemote(_ url: URL) {
 		let oldDelegate = delegate
 		delegate = nil
-
+		offset = 0
 		needsAsset = true
 		insiderInfoDuration = 0
 		isInitialized = false
@@ -349,6 +350,7 @@ open class SomePlayerEngine: NSObject {
 
 		needsAsset = true
 		insiderInfoDuration = 0
+		offset = 0
 		isInitialized = false
 		format = nil
 		isLocal       = true
@@ -392,6 +394,7 @@ open class SomePlayerEngine: NSObject {
 	public func seekPercently(to percent: Float) {
 		guard percent >= 0.0 && percent <= 1.0 else { return }
 		if fileDownloaded {
+			offset = 0
 			let intervalToSeek = hasDuration * TimeInterval(percent)
 			seek(to: intervalToSeek)
 			return
@@ -411,6 +414,7 @@ open class SomePlayerEngine: NSObject {
 			let hasWide = percent - percentOffset
 			let realPercent = hasWide / percentWide
 			let timeToSeek = TimeInterval(realPercent) * hasDuration
+			print("!!! we've seeked to \(timeToSeek.toMMSS())")
 			seek(to: timeToSeek)
 			return
 		}
@@ -421,12 +425,14 @@ open class SomePlayerEngine: NSObject {
 		
 		if percent == 1 {
 			self.streamer.stop()
+			offset = 0
 			self.state = .ended
 			return
 		}
 		//make offset and restart downloading
 		offset = Int64(Float(totalSize) * percent) + headerSize
 		resumableData = ResumableData(offset: offset)
+		currentTime = 0
 		restart()
 	}
 
@@ -586,7 +592,7 @@ extension SomePlayerEngine: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
 		hasError = false
 		hasBytes += bytes
-		if progress == 1.0 && offset == 0 {
+		if progress == 1.0 && (offset == 0 || offset == headerSize){
 			fileDownloaded = true
 		}
 		
@@ -669,7 +675,7 @@ extension SomePlayerEngine: StreamingDelegate {
 	}
 	
 	public func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
-		self.currentTime = currentTime
+		self.currentTime = currentTime + self.timeOffset
 		delegate?.playerEngine(self, updatedCurrentTime: currentTime)
 	}
 	

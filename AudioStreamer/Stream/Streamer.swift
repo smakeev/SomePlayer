@@ -147,6 +147,7 @@ open class Streamer: Streaming {
 		
 		// Reset the playback state
 		stop()
+		currentTimeOffset = 0
 		duration = nil
 		reader = nil
 		isFileSchedulingComplete = false
