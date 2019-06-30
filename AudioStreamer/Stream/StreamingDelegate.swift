@@ -54,4 +54,6 @@ public protocol StreamingDelegate: class {
 	func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval)
 	
 	func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?)
+	
+	func streamer(_ streamer: Streaming, isBuffering: Bool)
 }

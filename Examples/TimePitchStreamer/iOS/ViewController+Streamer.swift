@@ -12,6 +12,12 @@ import os.log
 import UIKit
 
 extension ViewController: SomeplayerEngineDelegate {
+	
+	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool) {
+		//to show that we are in buffering
+		UIApplication.shared.isNetworkActivityIndicatorVisible = isBuffering
+	}
+	
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedImage image: UIImage) {
 		imageView.image = image
 	}

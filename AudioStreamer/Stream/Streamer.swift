@@ -81,7 +81,13 @@ open class Streamer: Streaming {
 	
 	/// A `Bool` indicating whether the file has been completely scheduled into the playerEngine node.
 	var isFileSchedulingComplete = false
-	
+	var isBuffering = false {
+		didSet {
+			if oldValue != isBuffering {
+				delegate?.streamer(self, isBuffering: isBuffering)
+			}
+		}
+	}
 	// MARK: - Lifecycle
 	
 	public init() {        
@@ -191,7 +197,9 @@ open class Streamer: Streaming {
 		volume = 0
 		
 		// Start playback on the playerEngine node
-		playerEngineNode.play()
+		if !isBuffering {
+			playerEngineNode.play()
+		}
 		
 		// After 250ms we restore the volume to where it was
 		swellVolume(to: lastVolume)
@@ -203,13 +211,12 @@ open class Streamer: Streaming {
 	public func pause() {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
-		// Check if the playerEngine node is playing
-		guard playerEngineNode.isPlaying else {
-			return
-		}
-		
 		// Pause the playerEngine node and the engine
-		playerEngineNode.pause()
+		if !isBuffering {
+			if playerEngineNode.isPlaying {
+				playerEngineNode.pause()
+			}
+		}
 		
 		// Update the state
 		state = .paused
@@ -222,7 +229,8 @@ open class Streamer: Streaming {
 		downloader.stop()
 		playerEngineNode.stop()
 		engine.stop()
-		
+		isBuffering = false
+		isFileSchedulingComplete = false
 		// Update the state
 		state = .stopped
 	}
@@ -378,15 +386,40 @@ open class Streamer: Streaming {
 		}
 	}
 
+	internal var downloadingState: DownloadingState = .notStarted
+	
 	private let packetsMaxToSchedule: Int = 100
-	private var lastSteppedPacket:    Int = 0
+	private var stoppedForBuffering = false
+	private var lastSteppedPacket:    Int = 0 {
+		didSet {
+			if lastSteppedPacket == 0 && isBuffering {
+				if stoppedForBuffering {
+					return
+				}
+				playerEngineNode.pause()
+				stoppedForBuffering = true
+			} else if stoppedForBuffering {
+				stoppedForBuffering = false
+				if state == .playing {
+					playerEngineNode.play()
+				}
+			}
+		}
+	}
 	func scheduleNextBuffer() {
 		guard let reader = reader else {
 			os_log("No reader yet...", log: Streamer.logger, type: .debug)
+			isBuffering = true
+			if !stoppedForBuffering {
+				stoppedForBuffering = true
+				if playerEngineNode.isPlaying {
+					playerEngineNode.pause()
+				}
+			}
 			return
 		}
 		
-		guard !isFileSchedulingComplete else {
+		if isFileSchedulingComplete && downloadingState == .completed {
 			return
 		}
 
@@ -395,6 +428,8 @@ open class Streamer: Streaming {
 		}
 		do {
 			let nextScheduledBuffer = try reader.read(readBufferSize)
+			isBuffering = false
+			isFileSchedulingComplete = false
 			lastSteppedPacket += 1
 			playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self] in
 				guard let validSelf = self else { return }
@@ -408,6 +443,7 @@ open class Streamer: Streaming {
 			isFileSchedulingComplete = true
 		} catch ReaderError.notEnoughData {
 			os_log("Scheduler reached end of parsed part", log: Streamer.logger, type: .debug)
+			isBuffering = true
 		} catch {
 			os_log("Cannot schedule buffer: %@", log: Streamer.logger, type: .debug, error.localizedDescription)
 		}

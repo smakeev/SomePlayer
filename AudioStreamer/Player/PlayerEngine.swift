@@ -22,6 +22,7 @@ public protocol SomeplayerEngineDelegate: class {
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedTitle title: String)
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedArtist artist: String)
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String)
+	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool)
 }
 
 
@@ -548,10 +549,15 @@ open class SomePlayerEngine: NSObject {
 	}
 
 	public fileprivate(set) var lastBuffer: AVAudioPCMBuffer?
-
+	public fileprivate(set) var isBuffering: Bool = false
 }
 
 extension SomePlayerEngine: StreamingDelegate {
+
+	public func streamer(_ streamer: Streaming, isBuffering: Bool) {
+		self.isBuffering = isBuffering
+		delegate?.playerEngine(self, isBuffering: isBuffering)
+	}
 
 	public func streamer(_ streamer: Streaming, fileFinished url: URL) {
 		self.currentTime = timeOffset
