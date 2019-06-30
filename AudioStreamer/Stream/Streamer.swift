@@ -104,7 +104,7 @@ open class Streamer: Streaming {
 		engine.prepare()
 		
 		/// Use timer to schedule the buffers (this is not ideal, wish AVAudioEngine provided a pull-model for scheduling buffers)
-		let interval = 1 / (readFormat.sampleRate / Double(readBufferSize))
+		let interval = (1 / (readFormat.sampleRate / Double(readBufferSize))) / 100
 		scheduleNextBufferTimer = Timer(timeInterval: interval / 2, repeats: true) {
 			[weak self] _ in
 			guard self != nil else {
