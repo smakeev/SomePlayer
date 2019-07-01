@@ -433,7 +433,6 @@ open class SomePlayerEngine: NSObject {
 		//make offset and restart downloading
 		offset = Int64(Float(totalSize) * percent) + headerSize
 		resumableData = ResumableData(offset: offset)
-		currentTime = 0
 		restart()
 	}
 
