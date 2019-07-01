@@ -101,7 +101,6 @@ open class SomePlayerEngine: NSObject {
 					self.delegate?.playerEngine(self, changedState: self.state)
 				}
 			}
-			print("!!!! \(state)")
 
 			if state == .initializing {
 				streamer.totalDuration = 0
@@ -174,7 +173,6 @@ open class SomePlayerEngine: NSObject {
 				timeOffset = 0
 			}
 			streamer.totalTimeOffset = timeOffset
-			print("!!! new timeOffset: \(timeOffset)")
 		}
 	}
 	
@@ -415,7 +413,6 @@ open class SomePlayerEngine: NSObject {
 			let hasWide = percent - percentOffset
 			let realPercent = hasWide / percentWide
 			let timeToSeek = TimeInterval(realPercent) * hasDuration
-			print("!!! we've seeked to \(timeToSeek.toMMSS())")
 			seek(to: timeToSeek)
 			return
 		}

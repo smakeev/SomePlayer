@@ -54,7 +54,6 @@ public class ID3Parser: NSObject {
 		didSet {
 			if isQuick {
 				let isGoodForStream = self.isRangeAvailable && self.isTotalAvailable && (self.isID3 ?? false)
-				print("!!! \(self.isRangeAvailable), \(self.isTotalAvailable), \(self.isID3 ?? false)")
 				self.quickHandler?(self.isID3 ?? false, isGoodForStream)
 				self.quickHandler = nil
 				session.invalidateAndCancel()

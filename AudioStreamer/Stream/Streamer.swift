@@ -435,7 +435,6 @@ open class Streamer: Streaming {
 				guard let validSelf = self else { return }
 				DispatchQueue.main.async {
 					validSelf.lastSteppedPacket -= 1
-					print("@@@ \(validSelf.lastSteppedPacket)")
 				}
 			}
 		} catch ReaderError.reachedEndOfFile {
