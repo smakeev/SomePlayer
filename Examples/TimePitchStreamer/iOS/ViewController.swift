@@ -90,14 +90,14 @@ class ViewController: UIViewController {
 
 
 		//let str = "http://www.pusware.com/gobbet/gop1111.mp3" //no format for a long time (no range)
-		let str = "https://dts.podtrac.com/redirect.mp3/media.blubrry.com/99percentinvisible/dovetail.prxu.org/96/e8167dd5-7850-4de3-80c9-b51f39dbc087/01_356_The_Automat_pt01.mp3" //VBR
+		//let str = "https://dts.podtrac.com/redirect.mp3/media.blubrry.com/99percentinvisible/dovetail.prxu.org/96/e8167dd5-7850-4de3-80c9-b51f39dbc087/01_356_The_Automat_pt01.mp3" //VBR
 
 		//let str = "http://media.blubrry.com/shortstacks/continuum.umn.edu/media/Truth-Tweets-and-Tomorrows.mp3"//no total
 
-		//let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
+		// let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
 
 		//let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
-		//let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
+		let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
 		//let str = "http://202.6.74.107:8060/triplej.mp3" //not exist
 
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_1MG.wav" //WAW
