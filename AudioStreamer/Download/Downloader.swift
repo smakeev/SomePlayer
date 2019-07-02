@@ -68,7 +68,7 @@ public class Downloader: NSObject, Downloading {
 				state = .notStarted
 				totalBytesCount = 0
 				totalBytesReceived = 0
-				var request = URLRequest(url: url)
+				let request = URLRequest(url: url)
 				//todo add headers if needed
 				if let session = session {
 					task = session.dataTask(with: request)

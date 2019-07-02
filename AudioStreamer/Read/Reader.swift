@@ -33,6 +33,7 @@ public class Reader: Reading {
     // MARK: - Lifecycle
     
     deinit {
+    	//print("!!! READER DEINIT")
         guard AudioConverterDispose(converter!) == noErr else {
             os_log("Failed to dispose of audio converter", log: Reader.logger, type: .error)
             return
@@ -40,6 +41,7 @@ public class Reader: Reading {
     }
     
     public required init(parser: Parsing, readFormat: AVAudioFormat) throws {
+    	//print("!!! READER INIT")
         self.parser = parser
         
         guard let dataFormat = parser.dataFormat else {

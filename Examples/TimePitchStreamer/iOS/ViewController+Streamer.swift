@@ -54,7 +54,7 @@ extension ViewController: SomeplayerEngineDelegate {
 		progressSlider.progress = progress
 	}
 
-	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.playerEngineState) {
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState) {
 		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
 		switch state {

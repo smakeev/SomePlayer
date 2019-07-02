@@ -13,7 +13,7 @@ import UIKit
 public protocol SomeplayerEngineDelegate: class {
 	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL)
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
-	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.playerEngineState)
+	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState)
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval)
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDuration duration: TimeInterval)
 	func playerEngine(_ playerEngine: SomePlayerEngine, savedSeconds: TimeInterval)
@@ -28,7 +28,7 @@ public protocol SomeplayerEngineDelegate: class {
 
 open class SomePlayerEngine: NSObject {
 
-	public enum playerEngineState: Int {
+	public enum PlayerEngineState: Int {
 		case undefined = 0
 		case initializing
 		case ready
@@ -94,11 +94,15 @@ open class SomePlayerEngine: NSObject {
 		isGoodForStreamObservers[id] = nil
 	}
 
-	public fileprivate(set) var state: playerEngineState = .undefined {
+	private var lastReportedState: PlayerEngineState = .undefined
+	public fileprivate(set) var state: PlayerEngineState = .undefined {
 		didSet {
 			if state != oldValue {
 				DispatchQueue.main.async {
-					self.delegate?.playerEngine(self, changedState: self.state)
+					if self.lastReportedState != self.state {
+						self.lastReportedState = self.state
+						self.delegate?.playerEngine(self, changedState: self.state)
+					}
 				}
 			}
 
@@ -378,12 +382,7 @@ open class SomePlayerEngine: NSObject {
 		do{
 			amplitudes = [Float]()
 			self.rate = self.baseRate
-			
-			if time > hasDuration {
-				try streamer.seek(to: hasDuration)
-			} else {
-				try streamer.seek(to: time)
-			}
+			try streamer.seek(to: time)
 		}
 		catch {
 			///
@@ -422,12 +421,15 @@ open class SomePlayerEngine: NSObject {
 		}
 		
 		if percent == 1 {
+			offset = headerSize
+			resumableData = nil
+			try! self.streamer.seek(to: 0, internalUse: true)
 			self.streamer.stop()
-			offset = 0
 			self.state = .ended
 			return
 		}
 		//make offset and restart downloading
+		
 		offset = Int64(Float(totalSize) * percent) + headerSize
 		resumableData = ResumableData(offset: offset)
 		restart()
