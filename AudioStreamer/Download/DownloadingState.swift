@@ -17,6 +17,7 @@ import Foundation
 /// - stopped: The download has been stopped/cancelled
 public enum DownloadingState: String {
     case completed
+	case completedWithError
     case started
     case paused
     case notStarted

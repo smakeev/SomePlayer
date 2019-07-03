@@ -50,6 +50,8 @@ extension Downloader: URLSessionDataDelegate {
 			if let validError = error as NSError? {
 				if validError.code == -999 {
 					errorToReturn = nil
+				} else {
+					self.state = .completedWithError
 				}
 			}
 			

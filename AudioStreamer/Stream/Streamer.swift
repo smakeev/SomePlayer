@@ -439,7 +439,12 @@ open class Streamer: Streaming {
 			}
 		} catch ReaderError.reachedEndOfFile {
 			os_log("Scheduler reached end of file", log: Streamer.logger, type: .debug)
-			isFileSchedulingComplete = true
+			if downloadingState == .completed {
+				isFileSchedulingComplete = true
+			} else if downloadingState == .completedWithError {
+				isBuffering = true
+			}
+
 		} catch ReaderError.notEnoughData {
 			os_log("Scheduler reached end of parsed part", log: Streamer.logger, type: .debug)
 			isBuffering = true
