@@ -45,7 +45,9 @@ open class Streamer: Streaming {
 	public let playerEngineNode = AVAudioPlayerNode()
 	public internal(set) var state: StreamingState = .stopped {
 		didSet {
-				self.delegate?.streamer(self, changedState: self.state)
+			if oldValue != state {
+				self.delegate?.streamer(self, changedState: state)
+			}
 		}
 	}
 
