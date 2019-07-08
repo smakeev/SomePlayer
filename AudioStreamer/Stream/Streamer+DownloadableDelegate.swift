@@ -36,7 +36,9 @@ extension Streamer: DownloadingDelegate {
 	
 	public func download(_ download: Downloading, didReceiveData data: Data, progress: Float) {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
-		
+		if progressive && progressiveSeek != 0 && waitForProgress <= progress {
+			waitForProgress = 0
+		}
 		guard let parser = parser else {
 			os_log("Expected parser, bail...", log: Streamer.logger, type: .error)
 			return

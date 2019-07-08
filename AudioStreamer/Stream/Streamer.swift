@@ -21,6 +21,11 @@ open class Streamer: Streaming {
 			let playerTime = playerEngineNode.playerTime(forNodeTime: nodeTime) else {
 				return currentTimeOffset
 		}
+
+		if progressive && waitForProgress > 0 {
+			return progressiveSeek
+		}
+
 		let currentTime = TimeInterval(playerTime.sampleTime) / playerTime.sampleRate
 		return currentTime + currentTimeOffset
 	}
@@ -70,12 +75,53 @@ open class Streamer: Streaming {
 			engine.mainMixerNode.outputVolume = newValue
 		}
 	}
-	var scheduleNextBufferTimer: Timer?
-	var volumeRampTimer: Timer?
-	var volumeRampTargetValue: Float?
-	
+	var scheduleNextBufferTimer:   Timer?
+	var volumeRampTimer:           Timer?
+	var volumeRampTargetValue:     Float?
+	var succededInProgressiveSeek: Bool = false
+	var progressiveInPlay:         Bool = false
 	// MARK: - Properties
-	
+
+	var waitForProgress: Float = 0 {
+		didSet {
+			guard progressive else { return }
+			isBuffering = false
+			if waitForProgress == 0 {
+				if progressiveSeek != 0 {
+					do {
+						defer {
+							if succededInProgressiveSeek == true {
+								progressiveSeek = 0
+								if progressiveInPlay && !playerEngineNode.isPlaying {
+									playerEngineNode.play()
+								}
+							}
+							succededInProgressiveSeek = true
+						}
+						try seek(to: progressiveSeek)
+						succededInProgressiveSeek = true
+					}
+					catch {
+						succededInProgressiveSeek = false
+					}
+				}
+			} else {
+				if progressiveInPlay == false && playerEngineNode.isPlaying {
+					progressiveInPlay = true
+					playerEngineNode.pause()
+				}
+			}
+		}
+	}
+	var progressive: Bool = false
+	var progressiveSeek: TimeInterval = 0 {
+		didSet {
+			if progressive == false {
+				progressiveSeek = 0
+			}
+		}
+	}
+
 	/// A `TimeInterval` used to calculate the current play time relative to a seek operation.
 	var currentTimeOffset: TimeInterval = 0
 	
@@ -113,15 +159,14 @@ open class Streamer: Streaming {
 		let interval = (1 / (readFormat.sampleRate / Double(readBufferSize))) / 100
 		scheduleNextBufferTimer = Timer(timeInterval: interval / 2, repeats: true) {
 			[weak self] _ in
-			guard self != nil else {
+			guard let validSelf = self else {
 				return
 			}
 			guard self?.state != .stopped else {
 				return
 			}
-			//guard self?.isLocal != true else { return }
 
-			if self?.isLocal != true {
+			if self?.isLocal != true && validSelf.progressiveSeek == 0 {
 				self?.scheduleNextBuffer()
 			}
 			self?.handleTimeUpdate()
@@ -197,9 +242,16 @@ open class Streamer: Streaming {
 		volume = 0
 		
 		// Start playback on the playerEngine node
-		if !isBuffering {
+		if !isBuffering && !progressive {
 			playerEngineNode.play()
+		} else if progressive && !isBuffering {
+			if progressiveSeek == 0 {
+				playerEngineNode.play()
+			} else {
+				progressiveInPlay = true
+			}
 		}
+
 		
 		// After 250ms we restore the volume to where it was
 		swellVolume(to: lastVolume)
@@ -212,9 +264,17 @@ open class Streamer: Streaming {
 		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Pause the playerEngine node and the engine
-		if !isBuffering {
+		if !isBuffering && !progressive {
 			if playerEngineNode.isPlaying {
 				playerEngineNode.pause()
+			}
+		} else if progressive && !isBuffering {
+			if progressiveSeek != 0 {
+				progressiveInPlay = false
+			} else {
+				if playerEngineNode.isPlaying {
+					playerEngineNode.pause()
+				}
 			}
 		}
 		

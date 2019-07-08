@@ -225,11 +225,14 @@ open class SomePlayerEngine: NSObject {
 	
 	lazy public internal(set) var streamer: TimePitchStreamer = {
 		let streamer = TimePitchStreamer()
+		if self.downloadingPolicy == .progressiveDownload {
+			streamer.progressive = true
+		}
 		streamer.delegate = self
 		return streamer
 	}()
 
-    public var isLocal: Bool = false
+	public var isLocal: Bool = false
 
 	public internal(set) var url: URL? {
 		get { return streamer.url }
@@ -433,11 +436,7 @@ open class SomePlayerEngine: NSObject {
 			seek(to: timeToSeek)
 			return
 		}
-		if !rangeHeader {
-			seek(to: hasDuration)
-			return
-		}
-		
+
 		if percent == 1 {
 			offset = headerSize
 			resumableData = nil
@@ -446,11 +445,24 @@ open class SomePlayerEngine: NSObject {
 			self.state = .ended
 			return
 		}
+
+		if !rangeHeader && downloadingPolicy == .stream {
+			seek(to: hasDuration)
+			return
+		}
+
 		//make offset and restart downloading
-		
-		offset = Int64(Float(totalSize) * percent) + headerSize
-		resumableData = ResumableData(offset: offset)
-		restart()
+		if downloadingPolicy == .stream {
+			offset = Int64(Float(totalSize) * percent) + headerSize
+			resumableData = ResumableData(offset: offset)
+			restart()
+		} else if downloadingPolicy == .predownload {
+			seek(to: 0) //we should not be here. Make sure seek is available only on .ready state.
+		} else { //progressive download
+			let whereToSeek = self.duration * Double(percent)
+			streamer.progressiveSeek = whereToSeek
+			streamer.waitForProgress = percent
+		}
 	}
 
 	public func restart() {

@@ -50,12 +50,12 @@ extension ViewController: SomeplayerEngineDelegate {
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
-		//  os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
+		os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
 		progressSlider.progress = progress
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState) {
-		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
+		os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
 		switch state {
 		case .playing:
@@ -76,7 +76,7 @@ extension ViewController: SomeplayerEngineDelegate {
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval) {
-		//  os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
+		os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
 
 		if !isSeeking {
 			if !playerEngine.rangeHeader {
@@ -99,7 +99,7 @@ extension ViewController: SomeplayerEngineDelegate {
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDuration duration: TimeInterval) {
 		let formattedDuration = duration.toMMSS()
-		// os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
+		os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
 		durationTimeLabel.text = formattedDuration
 		if playerEngine.fileDownloaded {
 			if !playerEngine.rangeHeader {
