@@ -43,7 +43,7 @@ class ViewController: UIViewController {
 	}
 	// Streamer props
 	lazy var playerEngine: SomePlayerEngine = {
-		let playerEngine = SomePlayerEngine()
+		let playerEngine = SomePlayerEngine(.predownload)
 		playerEngine.delegate = self
 		return playerEngine
 	}()

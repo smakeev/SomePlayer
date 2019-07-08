@@ -77,6 +77,9 @@ open class SomePlayerEngine: NSObject {
 		didSet {
 			if fileDownloaded == true {
 				resumableData = nil
+				if downloadingPolicy == .predownload {
+					state = .ready
+				}
 			}
 		}
 	}
@@ -84,7 +87,7 @@ open class SomePlayerEngine: NSObject {
 	public internal(set) var format: AVAudioFormat? {
 		didSet {
 			if isInitialized && format != nil {
-				if self.state == .initializing {
+				if self.state == .initializing && self.downloadingPolicy != .predownload {
 					self.state = .ready
 				}
 			}
@@ -644,7 +647,7 @@ extension SomePlayerEngine: StreamingDelegate {
 		case .playing:
 			self.state = .playing
 		case .stopped:
-			if isInitialized && format != nil {
+			if isInitialized && format != nil && self.downloadingPolicy != .predownload {
 				self.state = .ready
 			}
 		}
