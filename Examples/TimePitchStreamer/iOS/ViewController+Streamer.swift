@@ -12,10 +12,23 @@ import os.log
 import UIKit
 
 extension ViewController: SomeplayerEngineDelegate {
-	
+
+	func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool) {
+		if isWaitingForDownloader || playerEngine.isBuffering {
+			UIApplication.shared.isNetworkActivityIndicatorVisible = true
+		} else {
+			UIApplication.shared.isNetworkActivityIndicatorVisible = false
+		}
+	}
+
 	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool) {
 		//to show that we are in buffering
-		UIApplication.shared.isNetworkActivityIndicatorVisible = isBuffering
+		if playerEngine.isWaitingForDownloader || isBuffering {
+			UIApplication.shared.isNetworkActivityIndicatorVisible = true
+		} else {
+			UIApplication.shared.isNetworkActivityIndicatorVisible = false
+		}
+
 	}
 	
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedImage image: UIImage) {

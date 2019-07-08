@@ -56,4 +56,7 @@ public protocol StreamingDelegate: class {
 	func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?)
 	
 	func streamer(_ streamer: Streaming, isBuffering: Bool)
+
+	//This only works in case of proressive downloading
+	func streamer(_ streamer: Streaming, isWaitingDownloader waiting: Bool)
 }

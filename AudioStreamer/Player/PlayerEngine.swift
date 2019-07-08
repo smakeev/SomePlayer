@@ -23,6 +23,7 @@ public protocol SomeplayerEngineDelegate: class {
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedArtist artist: String)
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String)
 	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool)
+	func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool)
 }
 
 
@@ -590,9 +591,17 @@ open class SomePlayerEngine: NSObject {
 
 	public fileprivate(set) var lastBuffer: AVAudioPCMBuffer?
 	public fileprivate(set) var isBuffering: Bool = false
+
+	//is only valid in case of progressiveDownloading mode.
+	public fileprivate(set) var isWaitingForDownloader: Bool = false
 }
 
 extension SomePlayerEngine: StreamingDelegate {
+
+	public func streamer(_ streamer: Streaming, isWaitingDownloader waiting: Bool) {
+		isWaitingForDownloader = waiting
+		delegate?.playerEngine(self, isWaitingForDownloader: waiting)
+	}
 
 	public func streamer(_ streamer: Streaming, isBuffering: Bool) {
 		self.isBuffering = isBuffering
