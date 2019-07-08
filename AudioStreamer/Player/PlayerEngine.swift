@@ -29,7 +29,7 @@ public protocol SomeplayerEngineDelegate: class {
 open class SomePlayerEngine: NSObject {
 
 	public enum PlayerEngineState: Int {
-		case undefined = 0
+		case undefined    = 0
 		case initializing
 		case ready
 		case playing
@@ -37,6 +37,19 @@ open class SomePlayerEngine: NSObject {
 		case ended
 		case failed
 	}
+
+	public enum PlayerEngineDownloadingPolicy: Int {
+		case stream               = 0
+		case predownload
+		case progressiveDownload
+	}
+
+	public init(_ policy: PlayerEngineDownloadingPolicy = .stream) {
+		downloadingPolicy = policy
+		super.init()
+	}
+
+	public internal(set) var downloadingPolicy: PlayerEngineDownloadingPolicy
 
 	public var volume: Float {
 		get {
