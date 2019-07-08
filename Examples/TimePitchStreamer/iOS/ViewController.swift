@@ -32,7 +32,9 @@ class ViewController: UIViewController {
 	@IBOutlet weak var progressSlider: ProgressSlider!
 	@IBOutlet weak var imageView: UIImageView!
 	@IBOutlet weak var artistLabel: UILabel!
-	
+	@IBOutlet weak var voiceBoostSwitch: UISwitch!
+
+
 	var savedSeconds: Double = 0 {
 		didSet {
 			let formatted = String(format: "saved: %.2f seconds", savedSeconds)
@@ -86,7 +88,7 @@ class ViewController: UIViewController {
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3" //1 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_2MG.mp3" //2 MG
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_5MG.mp3" // MG
-		//let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //good podcast
+		let str = "https://traffic.megaphone.fm/GLT1846252911.mp3" //good podcast
 
 
 		//let str = "http://www.pusware.com/gobbet/gop1111.mp3" //no format for a long time (no range)
@@ -97,7 +99,7 @@ class ViewController: UIViewController {
 		// let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
 
 		//let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
-		let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
+		//let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
 		//let str = "http://202.6.74.107:8060/triplej.mp3" //not exist
 
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_1MG.wav" //WAW
@@ -275,7 +277,14 @@ class ViewController: UIViewController {
 		rateLabel.text = String(format: "%.2fx", rate)
 		rateSlider.value = rate
 	}
-	
+
+	@IBAction func onVoiceBoost(_ sender: Any) {
+		if voiceBoostSwitch.isOn {
+			playerEngine.globalGain = 10.0
+		} else {
+			playerEngine.globalGain = 0.0
+		}
+	}
 }
 
 extension ViewController {
@@ -318,7 +327,6 @@ extension ViewController {
 		}
 
 	}
-
 
 	@objc fileprivate func onMediaServicesWereResetNotification(_ notification: Notification) {
 		DispatchQueue.main.async {

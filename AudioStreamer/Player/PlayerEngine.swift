@@ -390,6 +390,8 @@ open class SomePlayerEngine: NSObject {
 	}
 
 	public func seekPercently(to percent: Float) {
+		amplitudes = [Float]()
+		self.rate = self.baseRate
 		guard percent >= 0.0 && percent <= 1.0 else { return }
 		if fileDownloaded {
 			offset = 0
@@ -441,6 +443,18 @@ open class SomePlayerEngine: NSObject {
 		resume()
 		if stateBefore == .playing {
 			play()
+		}
+	}
+
+	public var globalGain: Float {
+		get {
+			return streamer.globalGain
+		}
+
+		set {
+			amplitudes = [Float]()
+			self.rate = self.baseRate
+			streamer.globalGain = newValue
 		}
 	}
 
@@ -518,8 +532,8 @@ open class SomePlayerEngine: NSObject {
 			guard amplitudes.count > 10 else { return }
 			amplitudes.remove(at: 0)
 			var result = baseRate
-			if self.amplitudes.last! > 50 {
-				if self.amplitudes.last! > 100 {
+			if self.amplitudes.last! > 50 + self.globalGain {
+				if self.amplitudes.last! > 100 + self.globalGain {
 					result = baseRate
 				} else {
 					result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.01
