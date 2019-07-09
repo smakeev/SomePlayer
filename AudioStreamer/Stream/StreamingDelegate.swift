@@ -3,7 +3,6 @@
 //  AudioStreamer
 //
 //  Created by Syed Haris Ali on 6/5/18.
-//  Copyright © 2018 Ausome Apps LLC. All rights reserved.
 //
 
 import Foundation
@@ -59,4 +58,9 @@ public protocol StreamingDelegate: class {
 
 	//This only works in case of proressive downloading
 	func streamer(_ streamer: Streaming, isWaitingDownloader waiting: Bool)
+
+	//errors
+	func streamerFailedToStartEngine(_ streamer: Streaming)
+	func streamerFailedToScheduleBuffer(_ streamer: Streaming)
+	func streamerFailedToCreateParser(_ streamer: Streaming)
 }

@@ -3,7 +3,6 @@
 //  TimePitchStreamer
 //
 //  Created by Syed Haris Ali on 6/5/18.
-//  Copyright © 2018 Ausome Apps LLC. All rights reserved.
 //
 
 import Foundation
@@ -12,6 +11,14 @@ import os.log
 import UIKit
 
 extension ViewController: SomeplayerEngineDelegate {
+	func playerEngine(_ playerEngine: SomePlayerEngine, failedWithException exception: SomePlayerEngine.FailureType) {
+		let alert = UIAlertController(title: "Player Failed", message: "Error on playing", preferredStyle: .alert)
+		alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+			alert.dismiss(animated: true, completion: nil)
+		}))
+		show(alert, sender: self)
+	}
+
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool) {
 		if isWaitingForDownloader || playerEngine.isBuffering {

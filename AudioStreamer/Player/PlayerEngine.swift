@@ -3,7 +3,6 @@
 //  AudioStreamer
 //
 //  Created by Sergey Makeev on 29/05/2019.
-//  Copyright © 2019 Ausome Apps LLC. All rights reserved.
 //
 
 import Foundation
@@ -11,7 +10,6 @@ import AVFoundation
 import UIKit
 
 public protocol SomeplayerEngineDelegate: class {
-	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL)
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState)
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval)
@@ -24,10 +22,18 @@ public protocol SomeplayerEngineDelegate: class {
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String)
 	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool)
 	func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool)
+	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL)
+	func playerEngine(_ playerEngine: SomePlayerEngine, failedWithException exception: SomePlayerEngine.FailureType)
 }
 
 
 open class SomePlayerEngine: NSObject {
+
+	public enum FailureType {
+		case engineStart
+		case scheduleBuffer
+		case createParser
+	}
 
 	public enum PlayerEngineState: Int {
 		case undefined    = 0
@@ -742,4 +748,20 @@ extension SomePlayerEngine: StreamingDelegate {
 	public func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?) {
 		self.format = format
 	}
+
+	public func streamerFailedToStartEngine(_ streamer: Streaming) {
+		delegate?.playerEngine(self, failedWithException: .engineStart)
+		self.state = .failed
+	}
+
+	public func streamerFailedToScheduleBuffer(_ streamer: Streaming) {
+		delegate?.playerEngine(self, failedWithException: .scheduleBuffer)
+		self.state = .failed
+	}
+
+	public func streamerFailedToCreateParser(_ streamer: Streaming) {
+		delegate?.playerEngine(self, failedWithException: .createParser)
+		self.state = .failed
+	}
+
 }

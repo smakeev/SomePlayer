@@ -3,7 +3,6 @@
 //  AudioStreamer
 //
 //  Created by Syed Haris Ali on 6/5/18.
-//  Copyright © 2018 Ausome Apps LLC. All rights reserved.
 //
 
 import AVFoundation
@@ -214,6 +213,7 @@ open class Streamer: Streaming {
 			}
 		} catch {
 			os_log("Failed to create parser: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+			delegate?.streamerFailedToCreateParser(self)
 		}
 	}
 	
@@ -236,6 +236,7 @@ open class Streamer: Streaming {
 				try engine.start()
 			} catch {
 				os_log("Failed to start engine: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+				delegate?.streamerFailedToStartEngine(self)
 			}
 		}
 		
@@ -512,6 +513,7 @@ open class Streamer: Streaming {
 			isBuffering = true
 		} catch {
 			os_log("Cannot schedule buffer: %@", log: Streamer.logger, type: .debug, error.localizedDescription)
+			delegate?.streamerFailedToScheduleBuffer(self)
 		}
 	}
 	
