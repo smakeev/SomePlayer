@@ -444,6 +444,7 @@ open class SomePlayerEngine: NSObject {
 			if downloadingPolicy == .progressiveDownload {
 				streamer.progressiveSeek = 0
 				streamer.waitForProgress = 0
+				streamer.progressiveInPlay = false
 				if self.state == .playing {
 					self.pause()
 					self.play()
