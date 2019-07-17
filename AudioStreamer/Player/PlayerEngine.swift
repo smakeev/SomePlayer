@@ -214,6 +214,12 @@ open class SomePlayerEngine: NSObject {
 	
 	public func resume() {
 		guard !fileDownloaded else { return }
+		if self.downloadingPolicy == .progressiveDownload {
+			resumableData = nil
+			hasBytes = 0
+			streamer.url = self.url
+		}
+		
 		if resumableData == nil {
 			//just start from the beginnig
 			streamer.url = self.url
@@ -435,6 +441,14 @@ open class SomePlayerEngine: NSObject {
 		   percent <= percentWeAre {
 
 			//We are inside downloaded area
+			if downloadingPolicy == .progressiveDownload {
+				streamer.progressiveSeek = 0
+				streamer.waitForProgress = 0
+				if self.state == .playing {
+					self.pause()
+					self.play()
+				}
+			}
 			let percentWide = percentWeAre - percentOffset
 			//let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
 			let hasWide = percent - percentOffset
