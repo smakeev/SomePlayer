@@ -110,16 +110,23 @@ open class SAPlayer {
 
 		public enum QueueType {
 			case general
-			case playNext
 			case sorted
 			case randomized
 		}
+
+		public private(set) var inPlayNextMode: Bool = false
 
 		public private(set) var type: QueueType = .general {
 			didSet {
 				onQueueType()
 			}
 		}
+
+		internal var ordinaryQueue = [SAPLayerItemRef]()
+		internal var useQueue      = [SAPLayerItemRef]()
+		internal var playNextQueue = [SAPLayerItemRef]()
+
+		private var sortRule: ((SAPLayerItemRef, SAPLayerItemRef) -> Bool)? = nil
 
 		public var count:         UInt = 0
 		public var playNextCount: UInt = 0
@@ -134,28 +141,64 @@ open class SAPlayer {
 			self.player = player
 		}
 
-		public func itemForIndex(_ index: UInt) -> SAPLayerItemRef? {
-			return nil
+		public func itemForIndex(_ index: Int) -> SAPLayerItemRef? {
+			guard index > 0 && index < ordinaryQueue.count else { return nil}
+			return ordinaryQueue[index]
+		}
+
+		public func itemInPlayQueue(at index: Int) -> SAPLayerItemRef? {
+			if type == .general {
+				return itemForIndex(index)
+			}
+			if !inPlayNextMode {
+				guard index > 0 && index < useQueue.count else { return nil}
+				return useQueue[index]
+			} else {
+				guard index > 0 && index < playNextQueue.count else { return nil}
+				return playNextQueue[index]
+			}
 		}
 
 		public func append(_ item: SAPLayerItemRef) {
+			ordinaryQueue.append(item)
+			if type == .general {
+				useQueue.append(item)
+			} else {
+				handleItemAdding(item)
+			}
+		}
 
+		public func playNext(_ item: SAPLayerItemRef) {
+			inPlayNextMode = true
+			playNextQueue.append(item)
 		}
 
 		public func push(_ item: SAPLayerItemRef) {
-
+			self.insert(item, at: 0)
 		}
 
-		public func insert(at index: UInt, item: SAPLayerItemRef) {
-
+		public func insert(_ item: SAPLayerItemRef, at index: Int) {
+			ordinaryQueue.insert(item, at: 0)
+			if type == .general {
+				useQueue.insert(item, at: 0)
+			} else {
+				handleItemAdding(item)
+			}
 		}
 
-		public func remove(at index: UInt) {
-
+		public func remove(at index: Int) {
+			guard index > 0 && index < ordinaryQueue.count else { return }
+			ordinaryQueue.remove(at: index)
+			useQueue.remove(at: 0)
 		}
 
 		public func remove(_ item: SAPLayerItemRef) {
-
+			ordinaryQueue = ordinaryQueue.filter {
+				return item !== $0
+			}
+			useQueue = useQueue.filter {
+				return item !== $0
+			}
 		}
 
 		public func removeLast() -> SAPLayerItemRef? {
@@ -170,7 +213,7 @@ open class SAPlayer {
 
 		}
 
-		public func sort(sortRule ascending: (SAPLayerItemRef, SAPLayerItemRef) -> Bool) {
+		public func sort(sortRule ascending: @escaping (SAPLayerItemRef, SAPLayerItemRef) -> Bool) {
 
 		}
 
@@ -182,16 +225,12 @@ open class SAPlayer {
 
 		}
 
-		public func goNext() {
-
+		public func goNext() -> Bool {
+			return false
 		}
 
-		public func goBack() {
-
-		}
-
-		public func playNext(_ item: SAPLayerItemRef) {
-
+		public func goBack() -> Bool {
+			return false
 		}
 
 		public func removeFromPlayNext(_ item: SAPLayerItemRef) {
@@ -255,6 +294,10 @@ open class SAPlayer {
 
 		}
 
+		private func handleItemAdding(_ item: SAPLayerItemRef) {
+			//do sort or whatever is needed
+		}
+
 		private func onChange() {
 			onChangeDispatcher.dispatch(self)
 		}
@@ -275,10 +318,6 @@ open class SAPlayer {
 		private var onWillGoNextDispatcher = Dispatcher<Queue>()
 		private var onWenNexDispatcher     = Dispatcher<Queue>()
 		private var onTypeDispatcher       = Dispatcher<QueueType>()
-
-		private var playNextItems = [SAPLayerItemRef]()
-		private var items         = [SAPLayerItemRef]()
-		private var orderedItems  = [SAPLayerItemRef]()
 	}
 
 	public init() {
@@ -387,8 +426,24 @@ open class SAPlayer {
 
 	}
 
+	public var isSmartSpeed: Bool {
+		return false
+	}
+
 	public func setSilenceSpeedUp(_ activate: Bool) {
 
+	}
+
+	public var isSilenceSpeedUp: Bool {
+		return false
+	}
+
+	public func setVoiceBoost(_ active: Bool) {
+
+	}
+
+	public var isVoiceBoost: Bool {
+		return false
 	}
 
 	//handlers
