@@ -498,6 +498,7 @@ open class Streamer: Streaming {
 				guard let validSelf = self else { return }
 				DispatchQueue.main.async {
 					validSelf.lastSteppedPacket -= 1
+					reader.freeBuffer()
 				}
 			}
 		} catch ReaderError.reachedEndOfFile {

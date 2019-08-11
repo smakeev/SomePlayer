@@ -10,7 +10,10 @@ import AVFoundation
 
 /// The `Reading` protocol provides an interface for defining the behavior we expect of an audio data provider in the context of an engine (`AVAudioEngine`) or graph (`AUGraph`).
 public protocol Reading {
-    
+	
+	var buffers: [[UnsafeMutableRawPointer]] { get }
+	var bufferDescriptions: [[UnsafeMutablePointer<AudioStreamPacketDescription>]] {get}
+	func freeBuffer()
     /// An `AVAudioPacketCount` representing the current packet index position. Reads are done relative to this position.
     var currentPacket: AVAudioPacketCount { get }
     
