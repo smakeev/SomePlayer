@@ -164,7 +164,7 @@ class ViewController: UIViewController {
 			try session.setCategory(.playback, mode: .default, policy: .default, options: [.allowBluetoothA2DP,.defaultToSpeaker])
 			try session.setActive(true)
 		} catch {
-			os_log("Failed to activate audio session: %@", log: ViewController.logger, type: .default, #function, #line, error.localizedDescription)
+			//os_log("Failed to activate audio session: %@", log: ViewController.logger, type: .default, #function, #line, error.localizedDescription)
 		}
 	}
 
@@ -183,7 +183,7 @@ class ViewController: UIViewController {
 	// MARK: - Playback
 	
 	@IBAction func togglePlayback(_ sender: UIButton) {
-		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		
 		if playerEngine.state == .playing {
 			playerEngine.pause()
@@ -196,7 +196,7 @@ class ViewController: UIViewController {
 	/// MARK: - Handle Seeking
 	
 	@IBAction func seek(_ sender: UISlider) {
-		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
+		//os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, progressSlider.value)
 		if !playerEngine.rangeHeader {
 			let time = TimeInterval(progressSlider.value)
 			playerEngine.seek(to: time)
@@ -207,13 +207,13 @@ class ViewController: UIViewController {
 	}
 	
 	@IBAction func progressSliderTouchedDown(_ sender: UISlider) {
-		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		
 		isSeeking = true
 	}
 	
 	@IBAction func progressSliderValueChanged(_ sender: UISlider) {
-		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
+	//	//os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		if playerEngine.fileDownloaded {
 			let currentTime = TimeInterval(progressSlider.value / progressSlider.maximumValue) * playerEngine.hasDuration
 			currentTimeLabel.text = currentTime.toMMSS()
@@ -225,7 +225,7 @@ class ViewController: UIViewController {
 	}
 	
 	@IBAction func progressSliderTouchedUp(_ sender: UISlider) {
-		os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: ViewController.logger, type: .debug, #function, #line)
 		
 		seek(sender)
 		isSeeking = false
@@ -234,7 +234,7 @@ class ViewController: UIViewController {
 	/// MARK: - Change Pitch
 	
 	@IBAction func changePitch(_ sender: UISlider) {
-		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, sender.value)
+		//os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, sender.value)
 		
 		let step: Float = 100
 		var pitch = roundf(pitchSlider.value)
@@ -246,7 +246,7 @@ class ViewController: UIViewController {
 	}
 	
 	@IBAction func resetPitch(_ sender: Any) {
-		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
 		
 		let pitch: Float = 0
 		playerEngine.pitch = pitch
@@ -257,7 +257,7 @@ class ViewController: UIViewController {
 	/// MARK: - Change Rate
 	
 	@IBAction func changeRate(_ sender: UISlider) {
-		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, sender.value)
+		//os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line, sender.value)
 		
 		let step: Float = 0.1
 		var rate = rateSlider.value
@@ -269,7 +269,7 @@ class ViewController: UIViewController {
 	}
 	
 	@IBAction func resetRate(_ sender: Any) {
-		os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d [%.1f]", log: ViewController.logger, type: .debug, #function, #line)
 		
 		let rate: Float = 1
 		playerEngine.baseRate = rate

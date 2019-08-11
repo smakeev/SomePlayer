@@ -30,12 +30,12 @@ class ValueChangeController: NSViewController {
     // MARK: - Methods
     
     @IBAction func resetButtonPressed(_ sender: NSButton) {
-        os_log("%s - %d", log: logger, type: .debug, #function, #line)
+        //os_log("%s - %d", log: logger, type: .debug, #function, #line)
         delegate?.valueChangeControllerTappedResetButton(self)
     }
     
     @IBAction func sliderValueChanged(_ sender: NSSlider) {
-        os_log("%s - %d", log: logger, type: .debug, #function, #line)
+        //os_log("%s - %d", log: logger, type: .debug, #function, #line)
         delegate?.valueChangeController(self, changedValue: sender.floatValue)
     }
     

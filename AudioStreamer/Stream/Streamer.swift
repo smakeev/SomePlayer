@@ -145,7 +145,7 @@ open class Streamer: Streaming {
 	// MARK: - Setup
 	
 	func setupAudioEngine() {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Attach nodes
 		attachNodes()
@@ -195,7 +195,7 @@ open class Streamer: Streaming {
 	}
 
 	func reset() {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Reset the playback state
 		stop()
@@ -212,7 +212,7 @@ open class Streamer: Streaming {
 				self?.delegate?.streamer(validSelf, willProvideFormat: format)
 			}
 		} catch {
-			os_log("Failed to create parser: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+			//os_log("Failed to create parser: %@", log: Streamer.logger, type: .error, error.localizedDescription)
 			delegate?.streamerFailedToCreateParser(self)
 		}
 	}
@@ -224,7 +224,7 @@ open class Streamer: Streaming {
 	}
 	
 	public func play() {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Check we're not already playing
 		guard !playerEngineNode.isPlaying else {
@@ -235,7 +235,7 @@ open class Streamer: Streaming {
 			do {
 				try engine.start()
 			} catch {
-				os_log("Failed to start engine: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+				//os_log("Failed to start engine: %@", log: Streamer.logger, type: .error, error.localizedDescription)
 				delegate?.streamerFailedToStartEngine(self)
 			}
 		}
@@ -264,7 +264,7 @@ open class Streamer: Streaming {
 	}
 	
 	public func pause() {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Pause the playerEngine node and the engine
 		if !isBuffering && !progressive {
@@ -286,7 +286,7 @@ open class Streamer: Streaming {
 	}
 	
 	public func stop() {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		
 		// Stop the downloader, the playerEngine node, and the engine
 		downloader.stop()
@@ -332,7 +332,7 @@ open class Streamer: Streaming {
 	}
 	
 	public func seek(to time: TimeInterval, internalUse: Bool = false) throws {
-		os_log("%@ - %d [%.1f]", log: Streamer.logger, type: .debug, #function, #line, time)
+		//os_log("%@ - %d [%.1f]", log: Streamer.logger, type: .debug, #function, #line, time)
 		
 		if isLocal {
 			seekLocal(to: time)
@@ -364,7 +364,7 @@ open class Streamer: Streaming {
 		do {
 			try reader.seek(packetOffset)
 		} catch {
-			os_log("Failed to seek: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+			//os_log("Failed to seek: %@", log: Streamer.logger, type: .error, error.localizedDescription)
 			return
 		}
 		
@@ -471,7 +471,7 @@ open class Streamer: Streaming {
 	}
 	func scheduleNextBuffer() {
 		guard let reader = reader else {
-			os_log("No reader yet...", log: Streamer.logger, type: .debug)
+			//os_log("No reader yet...", log: Streamer.logger, type: .debug)
 			isBuffering = true
 			if !stoppedForBuffering {
 				stoppedForBuffering = true
@@ -501,7 +501,7 @@ open class Streamer: Streaming {
 				}
 			}
 		} catch ReaderError.reachedEndOfFile {
-			os_log("Scheduler reached end of file", log: Streamer.logger, type: .debug)
+			//os_log("Scheduler reached end of file", log: Streamer.logger, type: .debug)
 			if downloadingState == .completed {
 				isFileSchedulingComplete = true
 			} else if downloadingState == .completedWithError {
@@ -509,10 +509,10 @@ open class Streamer: Streaming {
 			}
 
 		} catch ReaderError.notEnoughData {
-			os_log("Scheduler reached end of parsed part", log: Streamer.logger, type: .debug)
+			//os_log("Scheduler reached end of parsed part", log: Streamer.logger, type: .debug)
 			isBuffering = true
 		} catch {
-			os_log("Cannot schedule buffer: %@", log: Streamer.logger, type: .debug, error.localizedDescription)
+			//os_log("Cannot schedule buffer: %@", log: Streamer.logger, type: .debug, error.localizedDescription)
 			delegate?.streamerFailedToScheduleBuffer(self)
 		}
 	}

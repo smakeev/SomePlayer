@@ -34,7 +34,7 @@ public class Reader: Reading {
     deinit {
     	//print("!!! READER DEINIT")
         guard AudioConverterDispose(converter!) == noErr else {
-            os_log("Failed to dispose of audio converter", log: Reader.logger, type: .error)
+            //os_log("Failed to dispose of audio converter", log: Reader.logger, type: .error)
             return
         }
     }
@@ -55,7 +55,7 @@ public class Reader: Reading {
         }
         self.readFormat = readFormat
         
-        os_log("%@ - %d [sourceFormat: %@, destinationFormat: %@]", log: Reader.logger, type: .debug, #function, #line, String(describing: dataFormat), String(describing: readFormat))
+        //os_log("%@ - %d [sourceFormat: %@, destinationFormat: %@]", log: Reader.logger, type: .debug, #function, #line, String(describing: dataFormat), String(describing: readFormat))
     }
     
     // MARK: - Methods
@@ -91,7 +91,7 @@ public class Reader: Reading {
     }
     
     public func seek(_ packet: AVAudioPacketCount) throws {
-        os_log("%@ - %d [packet: %i]", log: Parser.logger, type: .debug, #function, #line, packet)
+        //os_log("%@ - %d [packet: %i]", log: Parser.logger, type: .debug, #function, #line, packet)
         
         queue.sync {
             currentPacket = packet

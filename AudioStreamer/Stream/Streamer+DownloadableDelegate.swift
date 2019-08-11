@@ -17,7 +17,7 @@ extension Streamer: DownloadingDelegate {
 	}
 	
 	public func download(_ download: Downloading, completedWithError error: Error?, bytesReceived: Int64, dataTask task: URLSessionTask) {
-		os_log("%@ - %d [error: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: error?.localizedDescription))
+		//os_log("%@ - %d [error: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: error?.localizedDescription))
 		
 		if let error = error, let url = download.url, let response = task.response {
 		//	DispatchQueue.main.async { [unowned self] in
@@ -27,19 +27,19 @@ extension Streamer: DownloadingDelegate {
 	}
 	
 	public func download(_ download: Downloading, changedState downloadState: DownloadingState) {
-		os_log("%@ - %d [state: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: downloadState))
+//		//os_log("%@ - %d [state: %@]", log: Streamer.logger, type: .debug, #function, #line, String(describing: downloadState))
 		//DispatchQueue.main.async { [unowned self] in
 			self.downloadingState = downloadState
 		//}
 	}
 	
 	public func download(_ download: Downloading, didReceiveData data: Data, progress: Float) {
-		os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
+//		//os_log("%@ - %d", log: Streamer.logger, type: .debug, #function, #line)
 		if progressive && progressiveSeek != 0 && waitForProgress <= progress {
 			waitForProgress = 0
 		}
 		guard let parser = parser else {
-			os_log("Expected parser, bail...", log: Streamer.logger, type: .error)
+			//os_log("Expected parser, bail...", log: Streamer.logger, type: .error)
 			return
 		}
 		
@@ -51,7 +51,7 @@ extension Streamer: DownloadingDelegate {
 			do {
 				try validSelf.parser?.parse(data: data)
 			} catch {
-				os_log("Failed to parse: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+				//os_log("Failed to parse: %@", log: Streamer.logger, type: .error, error.localizedDescription)
 			}
 			
 			/// Once there's enough data to start producing packets we can use the data format
@@ -60,7 +60,7 @@ extension Streamer: DownloadingDelegate {
 				do {
 					validSelf.reader = try Reader(parser: parser, readFormat: validSelf.readFormat)
 				} catch {
-					os_log("Failed to create reader: %@", log: Streamer.logger, type: .error, error.localizedDescription)
+					//os_log("Failed to create reader: %@", log: Streamer.logger, type: .error, error.localizedDescription)
 				}
 			}
 			

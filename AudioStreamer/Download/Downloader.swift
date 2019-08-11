@@ -84,7 +84,7 @@ public class Downloader: NSObject, Downloading {
 	// MARK: - Methods
 	
 	public func start() {
-		os_log("%@ - %d [%@]", log: Downloader.logger, type: .debug, #function, #line, String(describing: url))
+//		//os_log("%@ - %d [%@]", log: Downloader.logger, type: .debug, #function, #line, String(describing: url))
 		
 		guard let task = task else {
 			return
@@ -123,7 +123,7 @@ public class Downloader: NSObject, Downloading {
 	}
 	
 	public func pause() {
-		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
+//		//os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
 		
 		guard let task = task else {
 			return
@@ -138,7 +138,7 @@ public class Downloader: NSObject, Downloading {
 	}
 	
 	public func stop() {
-		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
+//		//os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
 		totalBytesReceived = 0
 		state = .stopped
 		guard let task = task else {

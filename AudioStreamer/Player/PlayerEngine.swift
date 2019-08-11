@@ -697,7 +697,7 @@ extension SomePlayerEngine: StreamingDelegate {
 		if state == .playing {
 			let bufferSize = streamer.readBufferSize
 			let format = mainMixer.outputFormat(forBus: 0)
-			print(format)
+			//print(format)
 			
 			mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
 				self.lastBuffer = buffer

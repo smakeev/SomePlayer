@@ -13,7 +13,7 @@ import os.log
 extension ViewController: StreamingDelegate {
     
     func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL) {
-        os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
+        //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
         
         streamer.stop()
         
@@ -30,7 +30,7 @@ extension ViewController: StreamingDelegate {
     }
     
     func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
-        os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
+        //os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
         
         progressIndicator.doubleValue = Double(progress * 100)
         if progress >= 1 {
@@ -40,7 +40,7 @@ extension ViewController: StreamingDelegate {
     }
     
     func streamer(_ streamer: Streaming, changedState state: StreamingState) {
-        os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
+        //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
         switch state {
         case .playing:
@@ -51,7 +51,7 @@ extension ViewController: StreamingDelegate {
     }
     
     func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
-        os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
+        //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
         
         if !isSeeking {
             seekSlider.doubleValue = Double(currentTime)
@@ -61,7 +61,7 @@ extension ViewController: StreamingDelegate {
     
     func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
         let formattedDuration = duration.toMMSS()
-        os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
+        //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
 
         seekSlider.minValue = 0
         seekSlider.maxValue = Double(duration)

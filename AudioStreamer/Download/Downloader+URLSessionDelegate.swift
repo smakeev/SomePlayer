@@ -10,7 +10,7 @@ import os.log
 
 extension Downloader: URLSessionDataDelegate {
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
+//		//os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
 		DispatchQueue.main.async {
 			self.totalBytesCount = response.expectedContentLength
 			
@@ -26,7 +26,7 @@ extension Downloader: URLSessionDataDelegate {
 	}
 	
 	public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line, data.count)
+//		//os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line, data.count)
 		DispatchQueue.main.async {
 			self.totalBytesReceived += Int64(data.count)
 			self.progress = Float(self.totalBytesReceived) / Float(self.totalBytesCount)
@@ -37,7 +37,7 @@ extension Downloader: URLSessionDataDelegate {
 	}
 	
 	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-		os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
+//		//os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
 		DispatchQueue.main.async {
 			if self.task === task {
 				self.state = .completed

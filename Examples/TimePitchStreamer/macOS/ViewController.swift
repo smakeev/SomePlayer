@@ -93,7 +93,7 @@ class ViewController: NSViewController {
     // MARK: - Methods
     
     @IBAction func playButtonPressed(_ sender: NSButton) {
-        os_log("%@ - %d", log: logger, type: .debug, #function, #line)
+        //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
         
         if streamer.state == .playing {
             streamer.pause()
@@ -103,7 +103,7 @@ class ViewController: NSViewController {
     }
     
     @IBAction func seekSliderValueChanged(_ sender: NSSlider) {
-        os_log("%@ - %d", log: logger, type: .debug, #function, #line)
+        //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
         
         let currentTime = TimeInterval(seekSlider.doubleValue)
         currentTimeLabel.stringValue = currentTime.toMMSS()
@@ -114,13 +114,13 @@ class ViewController: NSViewController {
     }
     
     @objc func seek() {
-        os_log("%@ - %d", log: logger, type: .debug, #function, #line)
+        //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
         
         do {
             let time = TimeInterval(seekSlider.doubleValue)
             try streamer.seek(to: time)
         } catch {
-            os_log("Failed to seek: %@", log: logger, type: .error, error.localizedDescription)
+            //os_log("Failed to seek: %@", log: logger, type: .error, error.localizedDescription)
         }
         
         isSeeking = false
