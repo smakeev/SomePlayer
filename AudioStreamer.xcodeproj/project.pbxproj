@@ -372,7 +372,7 @@
 					};
 					66A1395820013F860076B0E5 = {
 						CreatedOnToolsVersion = 9.2;
-						LastSwiftMigration = 1000;
+						LastSwiftMigration = 1030;
 						ProvisioningStyle = Automatic;
 					};
 					66A1396120013F860076B0E5 = {
@@ -712,7 +712,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ausomeapps.AudioStreamer;
 				PRODUCT_NAME = AudioStreamer;
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -734,7 +734,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ausomeapps.AudioStreamer;
 				PRODUCT_NAME = AudioStreamer;
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
