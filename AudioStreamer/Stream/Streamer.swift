@@ -95,6 +95,7 @@ open class Streamer: Streaming {
 								progressiveSeek = 0
 								if progressiveInPlay && !playerEngineNode.isPlaying {
 									playerEngineNode.play()
+									progressiveInPlay = false
 								}
 							}
 							succededInProgressiveSeek = true
