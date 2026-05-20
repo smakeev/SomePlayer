@@ -49,7 +49,6 @@ class ViewController: UIViewController {
 	
 	// Used so we can use the current time slider continuously, but only seek when the user touches up
 	var isSeeking = false
-	var lastLoggedProgressBucket = -1
 	
 	// MARK: - View Lifecycle
 
@@ -109,9 +108,7 @@ class ViewController: UIViewController {
 		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
 
 		let url = URL(string: str)!
-		print("[TimePitchStreamer] Opening remote URL: \(url.absoluteString)")
-		ID3Parser.isGoodForStream(url) {
-			print("[TimePitchStreamer] ID3 stream probe isID3=\($0), isGood=\($1)")
+		ID3Parser.isGoodForStream(url) { _, _ in
 		}
 		playerEngine.openRemote(url)
 
