@@ -76,7 +76,7 @@ open class SomePlayerEngine: NSObject {
 	public var silenceHandlingType: SilenceHandlingType = .none {
 		didSet {
 			guard oldValue != silenceHandlingType else { return }
-			amplitudes = [Float]()
+			silenceRateController.reset()
 			if oldValue == .none {
 				self.rate = self.baseRate
 			} else {
@@ -417,7 +417,7 @@ open class SomePlayerEngine: NSObject {
 	
 	public func seek(to time: TimeInterval) {
 		do{
-			amplitudes = [Float]()
+			silenceRateController.reset()
 			self.rate = self.baseRate
 			try streamer.seek(to: time)
 		}
@@ -427,7 +427,7 @@ open class SomePlayerEngine: NSObject {
 	}
 
 	public func seekPercently(to percent: Float) {
-		amplitudes = [Float]()
+		silenceRateController.reset()
 		self.rate = self.baseRate
 		guard percent >= 0.0 && percent <= 1.0 else { return }
 		if fileDownloaded {
@@ -507,7 +507,7 @@ open class SomePlayerEngine: NSObject {
 		}
 
 		set {
-			amplitudes = [Float]()
+			silenceRateController.reset()
 			self.rate = self.baseRate
 			streamer.globalGain = newValue
 		}
@@ -549,12 +549,11 @@ open class SomePlayerEngine: NSObject {
 		rateObservers[id] = nil
 	}
 	
-	private var amplitudes: [Float] = [Float]()
 	private let smartRateMaxBoost: Float = 0.75
 	private let smartRateMaxStep: Float = 0.04
 	private let smartRateSmoothing: Float = 0.25
 	private let smartRateSnapThreshold: Float = 0.001
-	private let silenceSpeedUpRate: Float = 3
+	private var silenceRateController = SilenceRateController()
 
 	private func applySmartRate(_ targetRate: Float, maxRate: Float? = nil) {
 		let upperRate = max(maxRate ?? baseRate + smartRateMaxBoost, baseRate)
@@ -566,7 +565,7 @@ open class SomePlayerEngine: NSObject {
 		rate = abs(boundedTarget - nextRate) <= smartRateSnapThreshold ? boundedTarget : nextRate
 	}
 	
-	private func handleSilence(frameLength: AVAudioFrameCount? = nil) {
+	private func handleSilence(loudness: Float? = nil, frameLength: AVAudioFrameCount? = nil) {
 		
 		func informForsavedTime() {
 			if let validSampleRate = self.sampleRate {
@@ -576,68 +575,35 @@ open class SomePlayerEngine: NSObject {
 				self.delegate?.playerEngine(self, savedSeconds: savedSeconds)
 			}
 		}
-		
-		if silenceHandlingType == .none {
-			if rate != baseRate {
-				applySmartRate(baseRate, maxRate: max(rate, baseRate))
-			}
+
+		guard let decision = silenceRateController.decision(
+			for: silenceRateControllerMode,
+			loudness: loudness,
+			baseRate: baseRate,
+			globalGain: globalGain
+		) else {
 			return
 		}
-		
-		if silenceHandlingType == .speedUp {
-			let decibelThreshold = Float(-35)
-			
-			if let average = averagePowerForChannel0 {
-				guard !average.isNaN && average.isFinite else { return }
-				if average < decibelThreshold {
-					applySmartRate(silenceSpeedUpRate, maxRate: silenceSpeedUpRate)
-				} else {
-					applySmartRate(baseRate, maxRate: silenceSpeedUpRate)
-				}
-				if rate > baseRate {
-					informForsavedTime()
-				}
-			}
-			return
-		}
-		
-		if silenceHandlingType == .smart {
-			guard let average = self.averagePowerForChannel0 else { return }
-			guard !average.isNaN && average.isFinite else { return }
 
-			amplitudes.append(average + 120)
-			guard amplitudes.count > 10 else { return }
-			amplitudes.remove(at: 0)
-			var result = baseRate
-			if self.amplitudes.last! > 50 + self.globalGain {
-				if self.amplitudes.last! > 100 + self.globalGain {
-					result = baseRate
-				} else {
-					result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.01
-				}
-			} else {
-				result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.02
-			}
-
-			applySmartRate(result)
-
+		applySmartRate(decision.targetRate, maxRate: decision.maxRate)
+		if decision.shouldReportSavedTime || rate > baseRate {
 			informForsavedTime()
-			return
 		}
 	}
-	
-	private var skipsAutomaticSilenceHandling = false
-	public fileprivate(set) var averagePowerForChannel0: Float? = nil {
-		didSet {
-			guard !skipsAutomaticSilenceHandling else { return }
-			handleSilence()
+
+	private var silenceRateControllerMode: SilenceRateController.Mode {
+		switch silenceHandlingType {
+		case .none:
+			return .none
+		case .smart:
+			return .smart
+		case .speedUp:
+			return .speedUp
 		}
 	}
-	public fileprivate(set) var averagePowerForChannel1: Float? = nil {
-		didSet {
-			//print("CH1 \(String(describing: averagePowerForChannel1))")
-		}
-	}
+		
+	public fileprivate(set) var averagePowerForChannel0: Float? = nil
+	public fileprivate(set) var averagePowerForChannel1: Float? = nil
 
 	public fileprivate(set) var lastBuffer: AVAudioPCMBuffer?
 	public fileprivate(set) var isBuffering: Bool = false
@@ -663,30 +629,11 @@ extension SomePlayerEngine: StreamingDelegate {
 		self.state = .ended
 	}
 
-	private func setAveragePowerCh1(_ power: Float?) {
+	private func handlePowerLevels(_ powerLevels: SilencePowerLevels?) {
 		DispatchQueue.main.async {
-			self.averagePowerForChannel1 = power
-		}
-	}
-	
-	private func averagePowerForChannel0Toch1() {
-		DispatchQueue.main.async {
-			self.averagePowerForChannel1 = self.averagePowerForChannel0
-		}
-	}
-	
-	private func setAveragePowerCh0(_ power: Float?) {
-		DispatchQueue.main.async {
-			self.averagePowerForChannel0 = power
-		}
-	}
-
-	private func handleAveragePowerCh0(_ power: Float?, frameLength: AVAudioFrameCount) {
-		DispatchQueue.main.async {
-			self.skipsAutomaticSilenceHandling = true
-			self.averagePowerForChannel0 = power
-			self.skipsAutomaticSilenceHandling = false
-			self.handleSilence(frameLength: frameLength)
+			self.averagePowerForChannel0 = powerLevels?.channel0
+			self.averagePowerForChannel1 = powerLevels?.channel1
+			self.handleSilence(loudness: powerLevels?.combined, frameLength: powerLevels?.frameLength)
 		}
 	}
 	
@@ -719,7 +666,7 @@ extension SomePlayerEngine: StreamingDelegate {
 	}
 
 	public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
-		amplitudes = [Float]()
+		silenceRateController.reset()
 		self.rate = self.baseRate
 		switch state {
 		case .paused:
@@ -739,51 +686,7 @@ extension SomePlayerEngine: StreamingDelegate {
 			
 			mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
 				self.lastBuffer = buffer
-				let frameLength = buffer.frameLength
-				guard frameLength > 0 else {
-					self.setAveragePowerCh0(nil)
-					self.setAveragePowerCh1(nil)
-					return
-				}
-				
-				if buffer.format.channelCount > 0 {
-					let channelData = buffer.floatChannelData
-					if let validChannelData = channelData {
-						let channelDataValue = validChannelData[0]
-						let channelDataValueArray = stride(from: 0,
-														   to: Int(frameLength),
-														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(frameLength)
-						let rms = sqrt(part)
-						self.handleAveragePowerCh0(20 * log10(rms), frameLength: frameLength)
-					} else {
-						self.setAveragePowerCh0(nil)
-						self.setAveragePowerCh1(nil)
-						return
-					}
-				} else {
-					self.setAveragePowerCh0(nil)
-					self.setAveragePowerCh1(nil)
-					return
-				}
-				
-				if buffer.format.channelCount > 1 {
-					let channelData = buffer.floatChannelData
-					if let validChannelData = channelData {
-						let channelDataValue = validChannelData[1]
-						let channelDataValueArray = stride(from: 0,
-														   to: Int(frameLength),
-														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(frameLength)
-						let rms = sqrt(part)
-						self.setAveragePowerCh1(20 * log10(rms))
-						
-					} else {
-						self.setAveragePowerCh1(nil)
-					}
-				} else {
-					self.averagePowerForChannel0Toch1()
-				}
+				self.handlePowerLevels(SilenceAudioAnalyzer.powerLevels(from: buffer))
 			}
 			
 		} else {
