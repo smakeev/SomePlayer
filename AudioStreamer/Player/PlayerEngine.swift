@@ -75,8 +75,13 @@ open class SomePlayerEngine: NSObject {
 	
 	public var silenceHandlingType: SilenceHandlingType = .none {
 		didSet {
+			guard oldValue != silenceHandlingType else { return }
 			amplitudes = [Float]()
-			self.rate = self.baseRate
+			if oldValue == .none {
+				self.rate = self.baseRate
+			} else {
+				applySmartRate(self.rate, maxRate: max(self.rate, self.baseRate))
+			}
 		}
 	}
 	
@@ -548,6 +553,7 @@ open class SomePlayerEngine: NSObject {
 	private let smartRateMaxBoost: Float = 0.75
 	private let smartRateMaxStep: Float = 0.04
 	private let smartRateSmoothing: Float = 0.25
+	private let smartRateSnapThreshold: Float = 0.001
 	private let silenceSpeedUpRate: Float = 3
 
 	private func applySmartRate(_ targetRate: Float, maxRate: Float? = nil) {
@@ -556,7 +562,8 @@ open class SomePlayerEngine: NSObject {
 		let currentRate = rate.isFinite ? rate : baseRate
 		let smoothedRate = currentRate + (boundedTarget - currentRate) * smartRateSmoothing
 		let delta = min(max(smoothedRate - currentRate, -smartRateMaxStep), smartRateMaxStep)
-		rate = currentRate + delta
+		let nextRate = currentRate + delta
+		rate = abs(boundedTarget - nextRate) <= smartRateSnapThreshold ? boundedTarget : nextRate
 	}
 	
 	private func handleSilence(frameLength: AVAudioFrameCount? = nil) {
@@ -571,6 +578,9 @@ open class SomePlayerEngine: NSObject {
 		}
 		
 		if silenceHandlingType == .none {
+			if rate != baseRate {
+				applySmartRate(baseRate, maxRate: max(rate, baseRate))
+			}
 			return
 		}
 		
