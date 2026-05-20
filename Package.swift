@@ -17,7 +17,7 @@ let package = Package(
     targets: [
         .target(
             name: "SomePlayer",
-            path: "Sources/SomePlayer",
+            path: "Sources",
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
