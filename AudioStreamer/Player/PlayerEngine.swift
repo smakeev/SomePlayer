@@ -555,12 +555,19 @@ open class SomePlayerEngine: NSObject {
 	private let smartRateSnapThreshold: Float = 0.001
 	private var silenceRateController = SilenceRateController()
 
-	private func applySmartRate(_ targetRate: Float, maxRate: Float? = nil) {
+	private func applySmartRate(
+		_ targetRate: Float,
+		maxRate: Float? = nil,
+		maxStep: Float? = nil,
+		smoothing: Float? = nil
+	) {
 		let upperRate = max(maxRate ?? baseRate + smartRateMaxBoost, baseRate)
 		let boundedTarget = min(max(targetRate, baseRate), upperRate)
 		let currentRate = rate.isFinite ? rate : baseRate
-		let smoothedRate = currentRate + (boundedTarget - currentRate) * smartRateSmoothing
-		let delta = min(max(smoothedRate - currentRate, -smartRateMaxStep), smartRateMaxStep)
+		let rateSmoothing = smoothing ?? smartRateSmoothing
+		let rateMaxStep = maxStep ?? smartRateMaxStep
+		let smoothedRate = currentRate + (boundedTarget - currentRate) * rateSmoothing
+		let delta = min(max(smoothedRate - currentRate, -rateMaxStep), rateMaxStep)
 		let nextRate = currentRate + delta
 		rate = abs(boundedTarget - nextRate) <= smartRateSnapThreshold ? boundedTarget : nextRate
 	}
@@ -585,7 +592,12 @@ open class SomePlayerEngine: NSObject {
 			return
 		}
 
-		applySmartRate(decision.targetRate, maxRate: decision.maxRate)
+		applySmartRate(
+			decision.targetRate,
+			maxRate: decision.maxRate,
+			maxStep: decision.maxStep,
+			smoothing: decision.smoothing
+		)
 		if decision.shouldReportSavedTime || rate > baseRate {
 			informForsavedTime()
 		}

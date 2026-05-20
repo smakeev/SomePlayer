@@ -77,17 +77,29 @@ struct SilenceRateController {
 	struct Decision {
 		let targetRate: Float
 		let maxRate: Float
+		let maxStep: Float
+		let smoothing: Float
 		let shouldReportSavedTime: Bool
 	}
 
 	private let smartMaxBoost: Float = 0.75
-	private let speedUpRate: Float = 3
-	private let silenceEnterThreshold: Float = -38
-	private let silenceExitThreshold: Float = -32
-	private let silenceEnterBuffers = 3
-	private let silenceExitBuffers = 2
+	private let smartMaxStep: Float = 0.04
+	private let smartSmoothing: Float = 0.25
+	private let speedUpRate: Float = 2.5
+	private let speedUpEnterThreshold: Float = -35
+	private let speedUpExitThreshold: Float = -28
+	private let speedUpEnterBuffers = 2
+	private let speedUpExitBuffers = 1
+	private let smartEnterThreshold: Float = -38
+	private let smartExitThreshold: Float = -32
+	private let smartEnterBuffers = 3
+	private let smartExitBuffers = 2
 	private let smartWindowSize = 20
 	private let smartLoudnessSmoothing: Float = 0.35
+	private let speedUpAttackMaxStep: Float = 0.18
+	private let speedUpAttackSmoothing: Float = 0.45
+	private let speedUpReleaseMaxStep: Float = 0.08
+	private let speedUpReleaseSmoothing: Float = 0.18
 
 	private var isSilent = false
 	private var silentBufferCount = 0
@@ -111,20 +123,29 @@ struct SilenceRateController {
 	) -> Decision? {
 		guard mode != .none else {
 			reset()
-			return Decision(targetRate: baseRate, maxRate: max(baseRate, speedUpRate), shouldReportSavedTime: false)
+			return Decision(
+				targetRate: baseRate,
+				maxRate: max(baseRate, speedUpRate),
+				maxStep: smartMaxStep,
+				smoothing: smartSmoothing,
+				shouldReportSavedTime: false
+			)
 		}
 		guard let loudness = loudness, loudness.isFinite else { return nil }
 
-		updateSilenceState(with: loudness)
+		updateSilenceState(with: loudness, mode: mode)
 
 		switch mode {
 		case .none:
 			return nil
 		case .speedUp:
 			let targetRate = isSilent ? speedUpRate : baseRate
+			let isAccelerating = targetRate > baseRate
 			return Decision(
 				targetRate: targetRate,
 				maxRate: max(baseRate, speedUpRate),
+				maxStep: isAccelerating ? speedUpAttackMaxStep : speedUpReleaseMaxStep,
+				smoothing: isAccelerating ? speedUpAttackSmoothing : speedUpReleaseSmoothing,
 				shouldReportSavedTime: targetRate > baseRate
 			)
 		case .smart:
@@ -132,32 +153,54 @@ struct SilenceRateController {
 			return Decision(
 				targetRate: targetRate,
 				maxRate: baseRate + smartMaxBoost,
+				maxStep: smartMaxStep,
+				smoothing: smartSmoothing,
 				shouldReportSavedTime: targetRate > baseRate
 			)
 		}
 	}
 
-	private mutating func updateSilenceState(with loudness: Float) {
+	private mutating func updateSilenceState(with loudness: Float, mode: Mode) {
+		let enterThreshold: Float
+		let exitThreshold: Float
+		let enterBuffers: Int
+		let exitBuffers: Int
+
+		switch mode {
+		case .none:
+			return
+		case .smart:
+			enterThreshold = smartEnterThreshold
+			exitThreshold = smartExitThreshold
+			enterBuffers = smartEnterBuffers
+			exitBuffers = smartExitBuffers
+		case .speedUp:
+			enterThreshold = speedUpEnterThreshold
+			exitThreshold = speedUpExitThreshold
+			enterBuffers = speedUpEnterBuffers
+			exitBuffers = speedUpExitBuffers
+		}
+
 		if isSilent {
-			if loudness > silenceExitThreshold {
+			if loudness > exitThreshold {
 				speechBufferCount += 1
 			} else {
 				speechBufferCount = 0
 			}
 
-			if speechBufferCount >= silenceExitBuffers {
+			if speechBufferCount >= exitBuffers {
 				isSilent = false
 				speechBufferCount = 0
 				silentBufferCount = 0
 			}
 		} else {
-			if loudness < silenceEnterThreshold {
+			if loudness < enterThreshold {
 				silentBufferCount += 1
 			} else {
 				silentBufferCount = 0
 			}
 
-			if silentBufferCount >= silenceEnterBuffers {
+			if silentBufferCount >= enterBuffers {
 				isSilent = true
 				silentBufferCount = 0
 				speechBufferCount = 0
@@ -179,7 +222,7 @@ struct SilenceRateController {
 		if smartAmplitudes.count > smartWindowSize {
 			smartAmplitudes.removeFirst(smartAmplitudes.count - smartWindowSize)
 		}
-		guard smartAmplitudes.count >= silenceEnterBuffers else { return baseRate }
+		guard smartAmplitudes.count >= smartEnterBuffers else { return baseRate }
 
 		let referenceAmplitude = percentile(0.8, in: smartAmplitudes)
 		let amplitudeGap = max(0, referenceAmplitude - currentAmplitude)
