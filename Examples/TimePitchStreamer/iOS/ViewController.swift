@@ -98,7 +98,7 @@ class ViewController: UIViewController {
 
 		// let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
 
-		let str = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+		let str = "https://traffic.libsyn.com/secure/syntax/Syntax_-_899.mp3"
 		//let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
 		//let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997" // 2026-05-20: redirects to HTTPS 404
 		//let str = "http://202.6.74.107:8060/triplej.mp3" //not exist
