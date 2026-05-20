@@ -49,6 +49,7 @@ class ViewController: UIViewController {
 	
 	// Used so we can use the current time slider continuously, but only seek when the user touches up
 	var isSeeking = false
+	var lastLoggedProgressBucket = -1
 	
 	// MARK: - View Lifecycle
 
@@ -97,8 +98,9 @@ class ViewController: UIViewController {
 
 		// let str = "http://feedproxy.google.com/~r/EndtimeMinistriesPodcast/~5/Af_F8emiKT0/631795170-endtime-ministries-eta060419.mp3"
 
+		let str = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 		//let str = "http://traffic.libsyn.com/joeroganexp/mmashow067.mp3?dest-id=19997"
-		let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997"
+		//let str = "http://traffic.libsyn.com/joeroganexp/p1304.mp3?dest-id=19997" // 2026-05-20: redirects to HTTPS 404
 		//let str = "http://202.6.74.107:8060/triplej.mp3" //not exist
 
 		//let str = "https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_1MG.wav" //WAW
@@ -107,8 +109,9 @@ class ViewController: UIViewController {
 		//let str = "file:///Users/sergeymakeev/Downloads/file_example_OOG_5MG.ogg"
 
 		let url = URL(string: str)!
+		print("[TimePitchStreamer] Opening remote URL: \(url.absoluteString)")
 		ID3Parser.isGoodForStream(url) {
-			print("!!! static isID2: \($0), isGood: \($1)")
+			print("[TimePitchStreamer] ID3 stream probe isID3=\($0), isGood=\($1)")
 		}
 		playerEngine.openRemote(url)
 

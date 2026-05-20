@@ -12,6 +12,7 @@ import UIKit
 
 extension ViewController: SomeplayerEngineDelegate {
 	func playerEngine(_ playerEngine: SomePlayerEngine, failedWithException exception: SomePlayerEngine.FailureType) {
+		print("[TimePitchStreamer] Player failed with exception: \(exception)")
 		let alert = UIAlertController(title: "Player Failed", message: "Error on playing", preferredStyle: .alert)
 		alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
 			alert.dismiss(animated: true, completion: nil)
@@ -21,6 +22,7 @@ extension ViewController: SomeplayerEngineDelegate {
 
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool) {
+		print("[TimePitchStreamer] Waiting for downloader: \(isWaitingForDownloader)")
 		if isWaitingForDownloader || playerEngine.isBuffering {
 			UIApplication.shared.isNetworkActivityIndicatorVisible = true
 		} else {
@@ -29,6 +31,7 @@ extension ViewController: SomeplayerEngineDelegate {
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool) {
+		print("[TimePitchStreamer] Buffering: \(isBuffering)")
 		//to show that we are in buffering
 		if playerEngine.isWaitingForDownloader || isBuffering {
 			UIApplication.shared.isNetworkActivityIndicatorVisible = true
@@ -60,6 +63,7 @@ extension ViewController: SomeplayerEngineDelegate {
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL) {
+		print("[TimePitchStreamer] Download failed for \(url.absoluteString): \(error.localizedDescription)")
 		// //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
 
 		let alert = UIAlertController(title: "Download Failed", message: error.localizedDescription, preferredStyle: .alert)
@@ -70,11 +74,17 @@ extension ViewController: SomeplayerEngineDelegate {
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
+		let bucket = Int((progress * 10).rounded(.down))
+		if bucket != lastLoggedProgressBucket {
+			lastLoggedProgressBucket = bucket
+			print("[TimePitchStreamer] Download progress total=\(progress), currentTask=\(currentProgress), url=\(url.absoluteString)")
+		}
 		//os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
 		progressSlider.progress = progress
 	}
 
 	func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState) {
+		print("[TimePitchStreamer] Player state: \(state)")
 		//os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
 		switch state {
