@@ -545,12 +545,24 @@ open class SomePlayerEngine: NSObject {
 	}
 	
 	private var amplitudes: [Float] = [Float]()
+	private let smartRateMaxBoost: Float = 0.75
+	private let smartRateMaxStep: Float = 0.04
+	private let smartRateSmoothing: Float = 0.25
+
+	private func applySmartRate(_ targetRate: Float) {
+		let boundedTarget = min(max(targetRate, baseRate), baseRate + smartRateMaxBoost)
+		let currentRate = rate.isFinite ? rate : baseRate
+		let smoothedRate = currentRate + (boundedTarget - currentRate) * smartRateSmoothing
+		let delta = min(max(smoothedRate - currentRate, -smartRateMaxStep), smartRateMaxStep)
+		rate = currentRate + delta
+	}
 	
-	private func handleSilence() {
+	private func handleSilence(frameLength: AVAudioFrameCount? = nil) {
 		
 		func informForsavedTime() {
 			if let validSampleRate = self.sampleRate {
-			 	let interval:Double = Double(1 / (validSampleRate / Double(streamer.readBufferSize)))
+				let frames = frameLength ?? streamer.readBufferSize
+				let interval: Double = Double(frames) / validSampleRate
 				let savedSeconds: Double = Double(interval - (interval / Double(self.rate)))
 				self.delegate?.playerEngine(self, savedSeconds: savedSeconds)
 			}
@@ -592,15 +604,17 @@ open class SomePlayerEngine: NSObject {
 				result = baseRate + (amplitudes.max()! - amplitudes.last!) * 0.02
 			}
 
-			self.rate = result
+			applySmartRate(result)
 
 			informForsavedTime()
 			return
 		}
 	}
 	
+	private var skipsAutomaticSilenceHandling = false
 	public fileprivate(set) var averagePowerForChannel0: Float? = nil {
 		didSet {
+			guard !skipsAutomaticSilenceHandling else { return }
 			handleSilence()
 		}
 	}
@@ -649,6 +663,15 @@ extension SomePlayerEngine: StreamingDelegate {
 	private func setAveragePowerCh0(_ power: Float?) {
 		DispatchQueue.main.async {
 			self.averagePowerForChannel0 = power
+		}
+	}
+
+	private func handleAveragePowerCh0(_ power: Float?, frameLength: AVAudioFrameCount) {
+		DispatchQueue.main.async {
+			self.skipsAutomaticSilenceHandling = true
+			self.averagePowerForChannel0 = power
+			self.skipsAutomaticSilenceHandling = false
+			self.handleSilence(frameLength: frameLength)
 		}
 	}
 	
@@ -701,18 +724,23 @@ extension SomePlayerEngine: StreamingDelegate {
 			
 			mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
 				self.lastBuffer = buffer
-				buffer.frameLength = bufferSize
+				let frameLength = buffer.frameLength
+				guard frameLength > 0 else {
+					self.setAveragePowerCh0(nil)
+					self.setAveragePowerCh1(nil)
+					return
+				}
 				
 				if buffer.format.channelCount > 0 {
 					let channelData = buffer.floatChannelData
 					if let validChannelData = channelData {
 						let channelDataValue = validChannelData[0]
 						let channelDataValueArray = stride(from: 0,
-														   to: Int(buffer.frameLength),
+														   to: Int(frameLength),
 														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(frameLength)
 						let rms = sqrt(part)
-						self.setAveragePowerCh0(20 * log10(rms))
+						self.handleAveragePowerCh0(20 * log10(rms), frameLength: frameLength)
 					} else {
 						self.setAveragePowerCh0(nil)
 						self.setAveragePowerCh1(nil)
@@ -729,9 +757,9 @@ extension SomePlayerEngine: StreamingDelegate {
 					if let validChannelData = channelData {
 						let channelDataValue = validChannelData[1]
 						let channelDataValueArray = stride(from: 0,
-														   to: Int(buffer.frameLength),
+														   to: Int(frameLength),
 														   by: buffer.stride).map{ channelDataValue[$0] }
-						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(buffer.frameLength)
+						let part = channelDataValueArray.map{ $0 * $0 }.reduce(0, +) / Float(frameLength)
 						let rms = sqrt(part)
 						self.setAveragePowerCh1(20 * log10(rms))
 						
