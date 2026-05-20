@@ -11,19 +11,19 @@ import Foundation
 
 public class SomeplayerEngineActionView: UIView {
 
-	public var action: ((SomeplayerEngineActionView) -> Void)? = nil
-	
-	internal var oldBGColor: UIColor!
-	
-	override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-		oldBGColor = self.backgroundColor
-		self.backgroundColor = .gray
-	}
-	
-	override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-		self.backgroundColor = oldBGColor
-		action?(self)
-	}
+    public var action: ((SomeplayerEngineActionView) -> Void)? = nil
+
+    internal var oldBGColor: UIColor!
+
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        oldBGColor = self.backgroundColor
+        self.backgroundColor = .gray
+    }
+
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.backgroundColor = oldBGColor
+        action?(self)
+    }
 
 }
 #endif

@@ -15,7 +15,7 @@ import AudioToolbox
 public enum ParserError: LocalizedError {
     case streamCouldNotOpen
     case failedToParseBytes(OSStatus)
-    
+
     public var errorDescription: String? {
         switch self {
         case .streamCouldNotOpen:
@@ -24,7 +24,7 @@ public enum ParserError: LocalizedError {
             return localizedDescriptionFromParseError(status)
         }
     }
-    
+
     func localizedDescriptionFromParseError(_ status: OSStatus) -> String {
         switch status {
         case kAudioFileStreamError_UnsupportedFileType:

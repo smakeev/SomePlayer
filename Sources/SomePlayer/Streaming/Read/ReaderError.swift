@@ -25,7 +25,7 @@ public enum ReaderError: LocalizedError {
     case parserMissingDataFormat
     case reachedEndOfFile
     case unableToCreateConverter(OSStatus)
-    
+
     public var errorDescription: String? {
         switch self {
         case .cannotLockQueue:
@@ -46,7 +46,7 @@ public enum ReaderError: LocalizedError {
             return localizedDescriptionFromConverterError(status)
         }
     }
-    
+
     func localizedDescriptionFromConverterError(_ status: OSStatus) -> String {
         switch status {
         case kAudioConverterErr_FormatNotSupported:

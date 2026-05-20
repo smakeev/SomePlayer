@@ -11,16 +11,16 @@ import Cocoa
 import os.log
 
 extension ViewController: StreamingDelegate {
-    
+
     func streamer(_ streamer: Streaming, failedDownloadWithError error: Error, forURL url: URL) {
         //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, error.localizedDescription)
-        
+
         streamer.stop()
-        
+
         guard let window = view.window else {
             return
         }
-        
+
         let alert = NSAlert()
         alert.messageText = "Download Failed"
         alert.informativeText = error.localizedDescription
@@ -28,17 +28,17 @@ extension ViewController: StreamingDelegate {
         alert.alertStyle = .critical
         alert.beginSheetModal(for: window) { _ in }
     }
-    
+
     func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, forURL url: URL) {
         //os_log("%@ - %d [%.2f]", log: ViewController.logger, type: .debug, #function, #line, progress)
-        
+
         progressIndicator.doubleValue = Double(progress * 100)
         if progress >= 1 {
             progressIndicator.isHidden = true
             playbackControlsStackView.setVisibilityPriority(.notVisible, for: progressIndicator)
         }
     }
-    
+
     func streamer(_ streamer: Streaming, changedState state: StreamingState) {
         //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, String(describing: state))
 
@@ -49,16 +49,16 @@ extension ViewController: StreamingDelegate {
             playButton.image = NSImage(named: "Play")
         }
     }
-    
+
     func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
         //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, currentTime.toMMSS())
-        
+
         if !isSeeking {
             seekSlider.doubleValue = Double(currentTime)
             currentTimeLabel.stringValue = currentTime.toMMSS()
         }
     }
-    
+
     func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
         let formattedDuration = duration.toMMSS()
         //os_log("%@ - %d [%@]", log: ViewController.logger, type: .debug, #function, #line, formattedDuration)
@@ -70,5 +70,5 @@ extension ViewController: StreamingDelegate {
         durationTimeLabel.isEnabled = true
         playButton.isEnabled = true
     }
-    
+
 }

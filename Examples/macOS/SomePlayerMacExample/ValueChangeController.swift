@@ -13,9 +13,9 @@ class ValueChangeController: NSViewController {
     var logger: OSLog {
         return ValueChangeController.logger
     }
-    
+
     weak var delegate: ValueChangeControllerDelegate?
-    
+
     // MARK: - Properties
 
     @IBOutlet weak var titleLabel: NSTextField! {
@@ -28,17 +28,17 @@ class ValueChangeController: NSViewController {
     @IBOutlet weak var resetButton: NSButton!
 
     // MARK: - Methods
-    
+
     @IBAction func resetButtonPressed(_ sender: NSButton) {
         //os_log("%s - %d", log: logger, type: .debug, #function, #line)
         delegate?.valueChangeControllerTappedResetButton(self)
     }
-    
+
     @IBAction func sliderValueChanged(_ sender: NSSlider) {
         //os_log("%s - %d", log: logger, type: .debug, #function, #line)
         delegate?.valueChangeController(self, changedValue: sender.floatValue)
     }
-    
+
     func setup(_ delegate: ValueChangeControllerDelegate,
                title: String,
                subtitle: String,
@@ -56,5 +56,5 @@ class ValueChangeController: NSViewController {
         resetButton.setFilterColor(filterColor)
         self.delegate = delegate
     }
-    
+
 }

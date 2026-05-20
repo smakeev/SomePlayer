@@ -14,61 +14,61 @@ public class Parser: Parsing {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser")
     static let loggerPacketCallback = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser.Packets")
     static let loggerPropertyListenerCallback = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser.PropertyListener")
-    
+
     // MARK: - Parsing props
 
-	deinit {
-		//print("!!! parser deinit")
-	}
+    deinit {
+        //print("!!! parser deinit")
+    }
 
-	public var formatObserver: ((AVAudioFormat?) -> Void)? = nil
-	
+    public var formatObserver: ((AVAudioFormat?) -> Void)? = nil
+
     public internal(set) var dataFormat: AVAudioFormat? {
-    	didSet {
-    		//inform delegate
-    		DispatchQueue.main.async {
-    			self.formatObserver?(self.dataFormat)
-			}
-		}
-	}
+        didSet {
+            //inform delegate
+            DispatchQueue.main.async {
+                self.formatObserver?(self.dataFormat)
+            }
+        }
+    }
     public internal(set) var packets = [(Data, AudioStreamPacketDescription?)]()
     public var totalPacketCount: AVAudioPacketCount? {
         guard let _ = dataFormat else {
             return nil
         }
-        
+
         return max(AVAudioPacketCount(packetCount), AVAudioPacketCount(packets.count))
     }
-    
+
     // MARK: - Properties
-    
+
     /// A `UInt64` corresponding to the total frame count parsed by the Audio File Stream Services
     public internal(set) var frameCount: UInt64 = 0
-    
+
     /// A `UInt64` corresponding to the total packet count parsed by the Audio File Stream Services
     public internal(set) var packetCount: UInt64 = 0
-    
+
     /// The `AudioFileStreamID` used by the Audio File Stream Services for converting the binary data into audio packets
     fileprivate var streamID: AudioFileStreamID?
-    
+
     // MARK: - Lifecycle
-    
+
     /// Initializes an instance of the `Parser`
     ///
     /// - Throws: A `ParserError.streamCouldNotOpen` meaning a file stream instance could not be opened
     public init() throws {
-    	//print("!!! Parser INIT")
+        //print("!!! Parser INIT")
         let context = unsafeBitCast(self, to: UnsafeMutableRawPointer.self)
         guard AudioFileStreamOpen(context, ParserPropertyChangeCallback, ParserPacketCallback, kAudioFileMP3Type, &streamID) == noErr else {
             throw ParserError.streamCouldNotOpen
         }
     }
-    
+
     // MARK: - Methods
-	
+
     public func parse(data: Data) throws {
 //        //os_log("%@ - %d", log: Parser.logger, type: .debug, #function, #line)
-        
+
         let streamID = self.streamID!
         let count = data.count
         _ = try data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) in

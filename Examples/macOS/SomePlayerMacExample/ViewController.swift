@@ -15,11 +15,11 @@ class ViewController: NSViewController {
     var logger: OSLog {
         return ValueChangeController.logger
     }
-    
+
     // MARK: - Properties
     @IBOutlet weak var currentTimeLabel: NSTextField!
-	@IBOutlet weak var smartSpeedLabel: UILabel!
-	@IBOutlet weak var durationTimeLabel: NSTextField!
+    @IBOutlet weak var smartSpeedLabel: UILabel!
+    @IBOutlet weak var durationTimeLabel: NSTextField!
     @IBOutlet weak var playbackControlsStackView: NSStackView!
     @IBOutlet weak var playButton: NSButton! {
         willSet {
@@ -39,10 +39,10 @@ class ViewController: NSViewController {
         }
     }
     @IBOutlet weak var stackView: NSStackView!
-    
+
     var isSeeking = false
     var seekTimer: Timer?
-    
+
     lazy var pitchController: ValueChangeController = {
         let vc = ValueChangeController()
         vc.setup(self,
@@ -54,7 +54,7 @@ class ViewController: NSViewController {
                  maxValue: 600)
         return vc
     }()
-    
+
     lazy var rateController: ValueChangeController = {
         let vc = ValueChangeController()
         vc.setup(self,
@@ -66,63 +66,63 @@ class ViewController: NSViewController {
                  maxValue: 2)
         return vc
     }()
-    
+
     lazy var streamer: TimePitchStreamer = {
         let streamer = TimePitchStreamer()
         streamer.delegate = self
         return streamer
     }()
-    
+
     // MARK: - View Lifecycle
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(red: 0.953, green: 0.965, blue: 0.984, alpha: 1).cgColor
-        
+
         /// Setup value change controllers
         stackView.addArrangedSubview(pitchController.view)
         stackView.addArrangedSubview(rateController.view)
-        
+
         /// Download
         let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
         streamer.url = url
     }
-    
+
     // MARK: - Methods
-    
+
     @IBAction func playButtonPressed(_ sender: NSButton) {
         //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
-        
+
         if streamer.state == .playing {
             streamer.pause()
         } else {
             streamer.play()
         }
     }
-    
+
     @IBAction func seekSliderValueChanged(_ sender: NSSlider) {
         //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
-        
+
         let currentTime = TimeInterval(seekSlider.doubleValue)
         currentTimeLabel.stringValue = currentTime.toMMSS()
-        
+
         isSeeking = true
         seekTimer?.invalidate()
         seekTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(seek), userInfo: nil, repeats: false)
     }
-    
+
     @objc func seek() {
         //os_log("%@ - %d", log: logger, type: .debug, #function, #line)
-        
+
         do {
             let time = TimeInterval(seekSlider.doubleValue)
             try streamer.seek(to: time)
         } catch {
             //os_log("Failed to seek: %@", log: logger, type: .error, error.localizedDescription)
         }
-        
+
         isSeeking = false
     }
 

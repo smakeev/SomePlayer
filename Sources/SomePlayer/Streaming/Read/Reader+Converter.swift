@@ -20,14 +20,14 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
                              _ outPacketDescriptions: UnsafeMutablePointer<UnsafeMutablePointer<AudioStreamPacketDescription>?>?,
                              _ context: UnsafeMutableRawPointer?) -> OSStatus {
     let reader = Unmanaged<Reader>.fromOpaque(context!).takeUnretainedValue()
-    
+
     //
     // Make sure we have a valid source format so we know the data format of the parser's audio packets
     //
     guard let sourceFormat = reader.parser.dataFormat else {
         return ReaderMissingSourceFormatError
     }
-    
+
     //
     // Check if we've reached the end of the packets. We have two scenarios:
     //     1. We've reached the end of the packet data and the file has been completely parsed
@@ -44,7 +44,7 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
             return ReaderNotEnoughDataError
         }
     }
-    
+
     //
     // Copy data over (note we've only processing a single packet of data at a time)
     //
@@ -52,25 +52,25 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     var data = packet.0
     let dataCount = data.count
     ioData.pointee.mNumberBuffers = 1
-	
-	
-	
-  	reader.buffers[reader.buffers.count - 1].append(UnsafeMutableRawPointer.allocate(byteCount: dataCount, alignment: 0))
+
+
+
+      reader.buffers[reader.buffers.count - 1].append(UnsafeMutableRawPointer.allocate(byteCount: dataCount, alignment: 0))
     _ = data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) in
-		ioData.pointee.mBuffers.mData = UnsafeMutableRawPointer(bytes)
+        ioData.pointee.mBuffers.mData = UnsafeMutableRawPointer(bytes)
         memcpy((reader.buffers.last?.last?.assumingMemoryBound(to: UInt8.self))!, bytes, dataCount)
     }
 
-	ioData.pointee.mBuffers.mData = reader.buffers.last?.last
+    ioData.pointee.mBuffers.mData = reader.buffers.last?.last
     ioData.pointee.mBuffers.mDataByteSize = UInt32(dataCount)
-    
+
     //
     // Handle packet descriptions for compressed formats (MP3, AAC, etc)
     //
     let sourceFormatDescription = sourceFormat.streamDescription.pointee
     if sourceFormatDescription.mFormatID != kAudioFormatLinearPCM {
         if outPacketDescriptions?.pointee == nil {
-        	reader.bufferDescriptions[reader.bufferDescriptions.count - 1].append(UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(capacity: 1))
+            reader.bufferDescriptions[reader.bufferDescriptions.count - 1].append(UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(capacity: 1))
             outPacketDescriptions?.pointee = reader.bufferDescriptions.last?.last
         }
         outPacketDescriptions?.pointee?.pointee.mDataByteSize = UInt32(dataCount)
@@ -79,6 +79,6 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     }
     packetCount.pointee = 1
     reader.currentPacket = reader.currentPacket + 1
-    
+
     return noErr;
 }
