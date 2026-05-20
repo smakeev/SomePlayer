@@ -24,6 +24,6 @@ Supported platforms:
 - `Sources/Metadata` - ID3 and asset metadata parsing.
 - `Sources/Utilities` - shared helpers without UI dependencies.
 - `Examples/UIKitExample/SomePlayerUIKitExample.xcodeproj` - current UIKit example wired to the local package.
-- `Examples/SwiftUI` - placeholder for the future standalone SwiftUI example.
+- `Examples/SwiftUI/SomePlayerSwiftUIExample.xcodeproj` - standalone SwiftUI example with separate iOS and macOS app targets.
 
 The old library Xcode projects were removed; the package is the source of truth now.
