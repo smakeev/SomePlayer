@@ -548,9 +548,11 @@ open class SomePlayerEngine: NSObject {
 	private let smartRateMaxBoost: Float = 0.75
 	private let smartRateMaxStep: Float = 0.04
 	private let smartRateSmoothing: Float = 0.25
+	private let silenceSpeedUpRate: Float = 3
 
-	private func applySmartRate(_ targetRate: Float) {
-		let boundedTarget = min(max(targetRate, baseRate), baseRate + smartRateMaxBoost)
+	private func applySmartRate(_ targetRate: Float, maxRate: Float? = nil) {
+		let upperRate = max(maxRate ?? baseRate + smartRateMaxBoost, baseRate)
+		let boundedTarget = min(max(targetRate, baseRate), upperRate)
 		let currentRate = rate.isFinite ? rate : baseRate
 		let smoothedRate = currentRate + (boundedTarget - currentRate) * smartRateSmoothing
 		let delta = min(max(smoothedRate - currentRate, -smartRateMaxStep), smartRateMaxStep)
@@ -576,11 +578,14 @@ open class SomePlayerEngine: NSObject {
 			let decibelThreshold = Float(-35)
 			
 			if let average = averagePowerForChannel0 {
+				guard !average.isNaN && average.isFinite else { return }
 				if average < decibelThreshold {
-					self.rate = 3
-					informForsavedTime()
+					applySmartRate(silenceSpeedUpRate, maxRate: silenceSpeedUpRate)
 				} else {
-					self.rate = Float(baseRate)
+					applySmartRate(baseRate, maxRate: silenceSpeedUpRate)
+				}
+				if rate > baseRate {
+					informForsavedTime()
 				}
 			}
 			return
