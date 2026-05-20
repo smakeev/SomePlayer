@@ -73,6 +73,9 @@
 		B6137508229F133E00694CF2 /* SilenceProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750B229F133E00694CF2 /* SilenceProcessing.swift */; };
 		B6137509229F133E00694CF2 /* SilenceProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750B229F133E00694CF2 /* SilenceProcessing.swift */; };
 		B613750A229F133E00694CF2 /* SilenceProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750B229F133E00694CF2 /* SilenceProcessing.swift */; };
+		B613750C229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750F229F133E00694CF2 /* AdaptiveSpeedProcessing.swift */; };
+		B613750D229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750F229F133E00694CF2 /* AdaptiveSpeedProcessing.swift */; };
+		B613750E229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B613750F229F133E00694CF2 /* AdaptiveSpeedProcessing.swift */; };
 		B6137505229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B6137506229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
 		B6137507229F133E00694CF2 /* TimePitchStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6137504229F133E00694CF2 /* TimePitchStreamer.swift */; };
@@ -124,6 +127,7 @@
 		66C8351E200286B400E953C7 /* Reader+Converter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reader+Converter.swift"; sourceTree = "<group>"; };
 		B61374FE229F124F00694CF2 /* PlayerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerEngine.swift; sourceTree = "<group>"; usesTabs = 1; };
 		B613750B229F133E00694CF2 /* SilenceProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SilenceProcessing.swift; sourceTree = "<group>"; };
+		B613750F229F133E00694CF2 /* AdaptiveSpeedProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveSpeedProcessing.swift; sourceTree = "<group>"; };
 		B6137504229F133E00694CF2 /* TimePitchStreamer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimePitchStreamer.swift; sourceTree = "<group>"; };
 		B61FBB1A22A1B2D800B7D839 /* SomePlayerActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomePlayerActionView.swift; sourceTree = "<group>"; };
 		B622B2AC22A30E2200842508 /* ResumableData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumableData.swift; sourceTree = "<group>"; };
@@ -266,6 +270,7 @@
 			children = (
 				B61374FE229F124F00694CF2 /* PlayerEngine.swift */,
 				B613750B229F133E00694CF2 /* SilenceProcessing.swift */,
+				B613750F229F133E00694CF2 /* AdaptiveSpeedProcessing.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -440,6 +445,7 @@
 					6643D851217837DC003DA158 /* DownloadingState.swift in Sources */,
 					B6137501229F124F00694CF2 /* PlayerEngine.swift in Sources */,
 					B613750A229F133E00694CF2 /* SilenceProcessing.swift in Sources */,
+					B613750E229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */,
 					6643D852217837DC003DA158 /* DownloadingDelegate.swift in Sources */,
 				6643D853217837DC003DA158 /* Parser.swift in Sources */,
 				6643D854217837DC003DA158 /* Parser+Packets.swift in Sources */,
@@ -466,6 +472,7 @@
 				files = (
 					B61374FF229F124F00694CF2 /* PlayerEngine.swift in Sources */,
 					B6137508229F133E00694CF2 /* SilenceProcessing.swift in Sources */,
+					B613750C229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */,
 					66C835172001BF0000E953C7 /* Reader.swift in Sources */,
 				66A13986200156790076B0E5 /* Downloader+URLSessionDelegate.swift in Sources */,
 				66A1397720013FAA0076B0E5 /* Downloader.swift in Sources */,
@@ -517,6 +524,7 @@
 					66C8350C2001A63A00E953C7 /* Parser+PropertyListener.swift in Sources */,
 					B6137500229F124F00694CF2 /* PlayerEngine.swift in Sources */,
 					B6137509229F133E00694CF2 /* SilenceProcessing.swift in Sources */,
+					B613750D229F133E00694CF2 /* AdaptiveSpeedProcessing.swift in Sources */,
 					66A1397A20013FAA0076B0E5 /* Downloading.swift in Sources */,
 				66C83520200286B400E953C7 /* Reader+Converter.swift in Sources */,
 			);

@@ -16,11 +16,14 @@ class ViewController: UIViewController {
 	// UI props
 	@IBOutlet weak var smartSpeedBtn: SomeplayerEngineActionView!
 	@IBOutlet weak var speedUpBtn: SomeplayerEngineActionView!
+	var adaptiveSpeedBtn: SomeplayerEngineActionView?
 	
 	@IBOutlet weak var smartSpeedLabel: UILabel!
 	@IBOutlet weak var speedUpLabel: UILabel!
+	var adaptiveSpeedLabel: UILabel?
 	@IBOutlet weak var smartSpeedMainLabel: UILabel!
 	@IBOutlet weak var speedUpMainLabel: UILabel!
+	var adaptiveSpeedMainLabel: UILabel?
 	@IBOutlet weak var currentTimeLabel: UILabel!
 	@IBOutlet weak var durationTimeLabel: UILabel!
 	@IBOutlet weak var rateLabel: UILabel!
@@ -65,6 +68,7 @@ class ViewController: UIViewController {
 		// Reset the pitch and rate
 		resetPitch(self)
 		resetRate(self)
+		configureAdaptiveSpeedButton()
 
 		/// Download
 		//let url = URL(string: "https://cdn.fastlearner.media/bensound-rumble.mp3")!
@@ -118,41 +122,21 @@ class ViewController: UIViewController {
 		smartSpeedBtn.action = { [unowned self] btn in
 			if self.playerEngine.silenceHandlingType == .smart {
 				self.playerEngine.silenceHandlingType = .none
-				btn.backgroundColor = .lightGray
-				self.smartSpeedLabel.textColor = .black
-				self.speedUpLabel.textColor = .black
-				self.smartSpeedMainLabel.textColor = .black
-				self.speedUpMainLabel.textColor = .black
+				self.updateSilenceModeSelection()
 				return
 			}
 			self.playerEngine.silenceHandlingType = .smart
-			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
-			self.smartSpeedLabel.textColor = .white
-			self.speedUpLabel.textColor = .black
-			self.speedUpBtn.backgroundColor = .lightGray
-			self.smartSpeedLabel.textColor = .white
-			self.speedUpLabel.textColor = .black
-			self.smartSpeedMainLabel.textColor = .white
-			self.speedUpMainLabel.textColor = .black
+			self.updateSilenceModeSelection()
 		}
 		
-		speedUpBtn.action = { btn in
+		speedUpBtn.action = { [unowned self] btn in
 			if self.playerEngine.silenceHandlingType == .speedUp {
 				self.playerEngine.silenceHandlingType = .none
-				btn.backgroundColor = .lightGray
-				self.smartSpeedLabel.textColor = .black
-				self.speedUpLabel.textColor = .black
-				self.smartSpeedMainLabel.textColor = .black
-				self.speedUpMainLabel.textColor = .black
+				self.updateSilenceModeSelection()
 				return
 			}
 			self.playerEngine.silenceHandlingType = .speedUp
-			btn.backgroundColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
-			self.smartSpeedBtn.backgroundColor = .lightGray
-			self.smartSpeedLabel.textColor = .black
-			self.speedUpLabel.textColor = .white
-			self.smartSpeedMainLabel.textColor = .black
-			self.speedUpMainLabel.textColor = .white
+			self.updateSilenceModeSelection()
 		}
 	}
 	
@@ -178,6 +162,100 @@ class ViewController: UIViewController {
 
 	internal func removePlayerNotifications() {
 		NotificationCenter.default.removeObserver(self)
+	}
+
+	private func configureAdaptiveSpeedButton() {
+		guard adaptiveSpeedBtn == nil,
+			  let selectorStackView = speedUpBtn.superview as? UIStackView else {
+			return
+		}
+
+		let button = SomeplayerEngineActionView()
+		button.backgroundColor = .lightGray
+		button.translatesAutoresizingMaskIntoConstraints = false
+
+		let labelStack = UIStackView()
+		labelStack.axis = .vertical
+		labelStack.alignment = .center
+		labelStack.distribution = .equalSpacing
+		labelStack.translatesAutoresizingMaskIntoConstraints = false
+		labelStack.isUserInteractionEnabled = false
+
+		let valueLabel = UILabel()
+		valueLabel.text = "adaptive"
+		valueLabel.textAlignment = .center
+		valueLabel.font = smartSpeedLabel.font
+		valueLabel.textColor = .black
+
+		let titleLabel = UILabel()
+		titleLabel.text = "Adaptive Speed"
+		titleLabel.textAlignment = .center
+		titleLabel.numberOfLines = 2
+		titleLabel.font = smartSpeedMainLabel.font
+		titleLabel.textColor = .black
+
+		labelStack.addArrangedSubview(valueLabel)
+		labelStack.addArrangedSubview(titleLabel)
+		button.addSubview(labelStack)
+		NSLayoutConstraint.activate([
+			labelStack.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 6),
+			labelStack.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -6),
+			labelStack.topAnchor.constraint(equalTo: button.topAnchor, constant: 8),
+			labelStack.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -8)
+		])
+
+		button.action = { [unowned self] _ in
+			if self.playerEngine.silenceHandlingType == .adaptiveSpeed {
+				self.playerEngine.silenceHandlingType = .none
+			} else {
+				self.playerEngine.silenceHandlingType = .adaptiveSpeed
+			}
+			self.updateSilenceModeSelection()
+		}
+
+		selectorStackView.addArrangedSubview(button)
+		adaptiveSpeedBtn = button
+		adaptiveSpeedLabel = valueLabel
+		adaptiveSpeedMainLabel = titleLabel
+		updateSilenceModeSelection()
+	}
+
+	private func updateSilenceModeSelection() {
+		let activeColor = #colorLiteral(red: 0.182216078, green: 0.2415350676, blue: 0.3457649052, alpha: 1)
+
+		updateModeButton(
+			smartSpeedBtn,
+			valueLabel: smartSpeedLabel,
+			titleLabel: smartSpeedMainLabel,
+			isSelected: playerEngine.silenceHandlingType == .smart,
+			activeColor: activeColor
+		)
+		updateModeButton(
+			speedUpBtn,
+			valueLabel: speedUpLabel,
+			titleLabel: speedUpMainLabel,
+			isSelected: playerEngine.silenceHandlingType == .speedUp,
+			activeColor: activeColor
+		)
+		updateModeButton(
+			adaptiveSpeedBtn,
+			valueLabel: adaptiveSpeedLabel,
+			titleLabel: adaptiveSpeedMainLabel,
+			isSelected: playerEngine.silenceHandlingType == .adaptiveSpeed,
+			activeColor: activeColor
+		)
+	}
+
+	private func updateModeButton(
+		_ button: SomeplayerEngineActionView?,
+		valueLabel: UILabel?,
+		titleLabel: UILabel?,
+		isSelected: Bool,
+		activeColor: UIColor
+	) {
+		button?.backgroundColor = isSelected ? activeColor : .lightGray
+		valueLabel?.textColor = isSelected ? .white : .black
+		titleLabel?.textColor = isSelected ? .white : .black
 	}
 
 	// MARK: - Playback

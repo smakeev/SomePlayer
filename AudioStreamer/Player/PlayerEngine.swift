@@ -71,6 +71,7 @@ open class SomePlayerEngine: NSObject {
 		case none
 		case smart
 		case speedUp
+		case adaptiveSpeed
 	}
 	
 	public var silenceHandlingType: SilenceHandlingType = .none {
@@ -611,6 +612,8 @@ open class SomePlayerEngine: NSObject {
 			return .smart
 		case .speedUp:
 			return .speedUp
+		case .adaptiveSpeed:
+			return .adaptiveSpeed
 		}
 	}
 		

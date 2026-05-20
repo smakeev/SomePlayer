@@ -72,6 +72,7 @@ struct SilenceRateController {
 		case none
 		case smart
 		case speedUp
+		case adaptiveSpeed
 	}
 
 	struct Decision {
@@ -106,6 +107,7 @@ struct SilenceRateController {
 	private var speechBufferCount = 0
 	private var smoothedLoudness: Float?
 	private var smartAmplitudes: [Float] = []
+	private var adaptiveSpeedController = AdaptiveSpeedController()
 
 	mutating func reset() {
 		isSilent = false
@@ -113,6 +115,7 @@ struct SilenceRateController {
 		speechBufferCount = 0
 		smoothedLoudness = nil
 		smartAmplitudes = []
+		adaptiveSpeedController.reset()
 	}
 
 	mutating func decision(
@@ -157,6 +160,15 @@ struct SilenceRateController {
 				smoothing: smartSmoothing,
 				shouldReportSavedTime: targetRate > baseRate
 			)
+		case .adaptiveSpeed:
+			let adaptiveDecision = adaptiveSpeedController.decision(loudness: loudness, baseRate: baseRate)
+			return Decision(
+				targetRate: adaptiveDecision.targetRate,
+				maxRate: adaptiveDecision.maxRate,
+				maxStep: adaptiveDecision.maxStep,
+				smoothing: adaptiveDecision.smoothing,
+				shouldReportSavedTime: adaptiveDecision.targetRate > baseRate
+			)
 		}
 	}
 
@@ -168,6 +180,8 @@ struct SilenceRateController {
 
 		switch mode {
 		case .none:
+			return
+		case .adaptiveSpeed:
 			return
 		case .smart:
 			enterThreshold = smartEnterThreshold
