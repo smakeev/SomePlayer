@@ -86,14 +86,21 @@ struct PlayerDemoView: View {
                         value: Binding(
                             get: { Double(model.sliderValue) },
                             set: {
-                                print("[SomePlayerDebug][UI] slider value changed value=\($0)")
+                                print("[SomePlayerDebug][UI] slider value changed value=\($0) isSeeking=\(model.isSeeking)")
+                                if !model.isSeeking {
+                                    model.beginSeeking()
+                                }
                                 model.updateSeekingValue(Float($0))
                             }
                         ),
                         in: 0...Double(max(model.timeline.sliderMaximumValue, 1)),
                         onEditingChanged: { editing in
                             print("[SomePlayerDebug][UI] slider editing=\(editing) slider=\(model.sliderValue) max=\(model.timeline.sliderMaximumValue) canSeek=\(model.canSeek)")
-                            editing ? model.beginSeeking() : model.commitSeek()
+                            if editing {
+                                model.beginSeeking()
+                            } else {
+                                model.commitSeek()
+                            }
                         }
                     )
                     .disabled(!model.canSeek)
