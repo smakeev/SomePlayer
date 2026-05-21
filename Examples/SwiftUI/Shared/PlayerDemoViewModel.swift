@@ -87,9 +87,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     @Published var isSeeking = false
 
     private var player = SomePlayer()
-    private var pendingSeekSliderValue: Float?
-    private var pendingSeekTargetTime: TimeInterval?
-    private var pendingSeekDeadline: Date?
+    private var isDraggingSlider = false
 
     private static let emptyTimeline = SomePlaybackTimelineState(
         currentTime: 0,
@@ -222,6 +220,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func beginSeeking() {
+        isDraggingSlider = true
         isSeeking = true
     }
 
@@ -230,23 +229,24 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func commitSeek() {
-        defer { isSeeking = false }
         guard canSeek, timeline.sliderMaximumValue > 0 else {
             print("[SomePlayerDebug][ViewModel] commitSeek rejected restoring slider=\(timeline.sliderValue)")
+            isDraggingSlider = false
+            isSeeking = false
             sliderValue = timeline.sliderValue
             return
         }
+        isDraggingSlider = false
+        isSeeking = false
         let targetTime: TimeInterval
         if player.rangeHeader {
             let percent = min(max(sliderValue / timeline.sliderMaximumValue, 0), 1)
             targetTime = TimeInterval(percent) * player.duration
             print("[SomePlayerDebug][ViewModel] commitSeek percent path percent=\(percent) targetTime=\(targetTime)")
-            holdSeekPosition(targetTime: targetTime)
             player.seekPercently(to: percent)
         } else {
             targetTime = TimeInterval(sliderValue)
             print("[SomePlayerDebug][ViewModel] commitSeek time path targetTime=\(targetTime)")
-            holdSeekPosition(targetTime: targetTime)
             player.seek(to: targetTime)
         }
     }
@@ -268,8 +268,8 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         state = .initializing
         timeline = Self.emptyTimeline
         sliderValue = 0
+        isDraggingSlider = false
         isSeeking = false
-        clearPendingSeek()
         appliedRate = 1
         savedSeconds = 0
         errorMessage = nil
@@ -283,37 +283,14 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     private func applyTimeline() {
-        timeline = player.timelineState
-        resolveFinishedSeekIfNeeded()
-        guard !isSeeking else {
-            sliderValue = pendingSeekSliderValue ?? sliderValue
+        let latestTimeline = player.timelineState
+        if isDraggingSlider {
+            print("[SomePlayerDebug][ViewModel] applyTimeline SKIPPED isDragging=true isSeeking=\(isSeeking)")
             return
         }
-        clearPendingSeek()
-        sliderValue = timeline.sliderValue
-    }
-
-    private func holdSeekPosition(targetTime: TimeInterval) {
-        pendingSeekSliderValue = sliderValue
-        pendingSeekTargetTime = targetTime
-        pendingSeekDeadline = Date().addingTimeInterval(0.5)
-    }
-
-    private func resolveFinishedSeekIfNeeded() {
-        guard isSeeking,
-              let targetTime = pendingSeekTargetTime,
-              let deadline = pendingSeekDeadline else {
-            return
-        }
-        if abs(timeline.currentTime - targetTime) <= 1 || Date() > deadline {
-            isSeeking = false
-        }
-    }
-
-    private func clearPendingSeek() {
-        pendingSeekSliderValue = nil
-        pendingSeekTargetTime = nil
-        pendingSeekDeadline = nil
+        print("[SomePlayerDebug][ViewModel] applyTimeline UPDATE slider=\(latestTimeline.sliderValue) time=\(latestTimeline.currentTimeText) max=\(latestTimeline.sliderMaximumValue) isSeeking=\(isSeeking)")
+        timeline = latestTimeline
+        sliderValue = latestTimeline.sliderValue
     }
 
     private func configurePlayer() {

@@ -4,6 +4,8 @@ import SwiftUI
 struct PlayerDemoView: View {
     @ObservedObject var model: PlayerDemoViewModel
     @State private var showingDownloadingPolicyPicker = false
+    @State private var localSliderValue: Double = 0
+    @State private var isSliderDragging = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -89,24 +91,30 @@ struct PlayerDemoView: View {
 
                 VStack(spacing: 8) {
                     Slider(
-                        value: Binding(
-                            get: { Double(model.sliderValue) },
-                            set: {
-                                print("[SomePlayerDebug][UI] slider value changed value=\($0) isSeeking=\(model.isSeeking)")
-                                model.updateSeekingValue(Float($0))
-                            }
-                        ),
+                        value: $localSliderValue,
                         in: 0...Double(max(model.timeline.sliderMaximumValue, 1)),
                         onEditingChanged: { editing in
-                            print("[SomePlayerDebug][UI] slider editing=\(editing) slider=\(model.sliderValue) max=\(model.timeline.sliderMaximumValue) canSeek=\(model.canSeek)")
+                            print("[SomePlayerDebug][UI] slider editing=\(editing) slider=\(localSliderValue) max=\(model.timeline.sliderMaximumValue) canSeek=\(model.canSeek)")
+                            isSliderDragging = editing
                             if editing {
                                 model.beginSeeking()
                             } else {
+                                model.updateSeekingValue(Float(localSliderValue))
                                 model.commitSeek()
                             }
                         }
                     )
                     .disabled(!model.canSeek)
+                    .onChange(of: localSliderValue) {
+                        if isSliderDragging {
+                            model.updateSeekingValue(Float(localSliderValue))
+                        }
+                    }
+                    .onChange(of: model.sliderValue) {
+                        if !isSliderDragging {
+                            localSliderValue = Double(model.sliderValue)
+                        }
+                    }
 
                     HStack {
                         Text(model.currentTimeText)
