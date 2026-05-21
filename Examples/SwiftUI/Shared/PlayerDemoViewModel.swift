@@ -215,7 +215,6 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func reload() {
-        detachPlayer()
         state = .initializing
         timeline = Self.emptyTimeline
         sliderValue = 0
@@ -229,8 +228,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         album = ""
         artwork = nil
         selectedMode = .none
-        player = SomePlayer(.progressiveDownload)
-        configurePlayer()
+        player.reset()
     }
 
     private func applyTimeline() {
@@ -284,13 +282,6 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
             }
         }
         player.openRemote(streamURL)
-    }
-
-    private func detachPlayer() {
-        print("[SomePlayerDebug][ViewModel] detachPlayer")
-        player.pause()
-        player.removeRateObserver(withId: "swiftui-example")
-        player.delegate = nil
     }
 
     private func configureAudioSessionIfNeeded(platform: Platform) {

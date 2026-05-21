@@ -437,7 +437,7 @@ open class SomePlayerEngine: NSObject {
 
     public internal(set) var isInitialized: Bool = false
 
-    public func openRemote(_ url: URL) {
+    private func resetPlaybackStateForOpening(isLocal: Bool, clearMetadata: Bool) {
         let oldDelegate = delegate
         delegate = nil
         offset = 0
@@ -445,32 +445,60 @@ open class SomePlayerEngine: NSObject {
         insiderInfoDuration = 0
         isInitialized = false
         format = nil
-        isLocal       = false
-        streamer.reset()
+        self.isLocal = isLocal
+        currentTime = 0
+        hasDuration = 0
+        estimatedDuration = 0
+        totalSize = 0
+        headerSize = 0
+        hasBytes = 0
+        aboutBitrate = 0
+        lastDownloadProgress = 0
         fileDownloaded = false
         hasError = false
         rangeHeader = false
+        isBuffering = false
+        isWaitingForDownloader = false
+        silenceRateController.reset()
+        rate = baseRate
+        streamer.reset()
+        if clearMetadata {
+            title = nil
+            artist = nil
+            album = nil
+            image = nil
+        }
         self.delegate = oldDelegate
+    }
+
+    public func openRemote(_ url: URL) {
+        resetPlaybackStateForOpening(isLocal: false, clearMetadata: true)
         handleMeta(url) {
             self.url = url
         }
     }
 
     public func openLocal(_  url: URL) {
-        let oldDelegate = delegate
-        delegate = nil
-
-        needsAsset = true
-        insiderInfoDuration = 0
-        offset = 0
-        isInitialized = false
-        format = nil
-        isLocal       = true
-        streamer.reset()
+        resetPlaybackStateForOpening(isLocal: true, clearMetadata: true)
         fileDownloaded = true
-        hasError = false
-        rangeHeader = false
-        self.delegate = oldDelegate
+        handleMeta(url) {
+            self.url = url
+        }
+    }
+
+    /// Resets playback state and reloads the current item without replacing the player instance.
+    public func reset() {
+        guard let url else {
+            resetPlaybackStateForOpening(isLocal: isLocal, clearMetadata: true)
+            state = .undefined
+            return
+        }
+
+        let shouldOpenLocal = isLocal
+        resetPlaybackStateForOpening(isLocal: shouldOpenLocal, clearMetadata: true)
+        if shouldOpenLocal {
+            fileDownloaded = true
+        }
         handleMeta(url) {
             self.url = url
         }
