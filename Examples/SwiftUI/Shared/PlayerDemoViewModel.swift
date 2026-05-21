@@ -17,16 +17,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     let streamURL = URL(string: "https://traffic.libsyn.com/secure/syntax/Syntax_-_899.mp3")!
 
     @Published private(set) var state: SomePlayerEngine.PlayerEngineState = .undefined
-    @Published private(set) var timeline = SomePlaybackTimelineState(
-        currentTime: 0,
-        duration: 0,
-        currentTimeText: "00:00",
-        durationText: "00:00",
-        sliderValue: 0,
-        sliderMaximumValue: 1,
-        downloadProgress: 0,
-        offsetProgress: 0
-    )
+    @Published private(set) var timeline = PlayerDemoViewModel.emptyTimeline
     @Published private(set) var appliedRate: Float = 1
     @Published private(set) var savedSeconds: TimeInterval = 0
     @Published private(set) var title: String = "Loading stream..."
@@ -70,22 +61,32 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     @Published var sliderValue: Float = 0
     @Published var isSeeking = false
 
-    let player = SomePlayer(.progressiveDownload)
+    private var player = SomePlayer(.progressiveDownload)
+    private var pendingSeekSliderValue: Float?
+    private var pendingSeekTargetTime: TimeInterval?
+    private var pendingSeekDeadline: Date?
+
+    private static let emptyTimeline = SomePlaybackTimelineState(
+        currentTime: 0,
+        duration: 0,
+        currentTimeText: "00:00",
+        durationText: "00:00",
+        sliderValue: 0,
+        sliderMaximumValue: 1,
+        downloadProgress: 0,
+        offsetProgress: 0
+    )
 
     init(platform: Platform) {
         super.init()
-        player.delegate = self
+        print("[SomePlayerDebug][ViewModel] init platform=\(platform)")
         configureAudioSessionIfNeeded(platform: platform)
-        player.addRateObserver(withId: "swiftui-example") { [weak self] rate in
-            Task { @MainActor in
-                self?.appliedRate = rate
-            }
-        }
-        player.openRemote(streamURL)
+        configurePlayer()
     }
 
     deinit {
         player.removeRateObserver(withId: "swiftui-example")
+        player.delegate = nil
     }
 
     var canPlay: Bool {
@@ -94,6 +95,14 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
 
     var isPlaying: Bool {
         state == .playing
+    }
+
+    var canSeek: Bool {
+        let result = canPlay && timeline.sliderMaximumValue > 1 && player.duration > 0
+        if !result {
+            print("[SomePlayerDebug][ViewModel] canSeek=false state=\(state) max=\(timeline.sliderMaximumValue) duration=\(player.duration) range=\(player.rangeHeader) totalSize=\(player.totalSize)")
+        }
+        return result
     }
 
     var statusText: String {
@@ -177,11 +186,23 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
 
     func commitSeek() {
         defer { isSeeking = false }
-        guard timeline.sliderMaximumValue > 0 else { return }
+        guard canSeek, timeline.sliderMaximumValue > 0 else {
+            print("[SomePlayerDebug][ViewModel] commitSeek rejected restoring slider=\(timeline.sliderValue)")
+            sliderValue = timeline.sliderValue
+            return
+        }
+        let targetTime: TimeInterval
         if player.rangeHeader {
-            player.seekPercently(to: sliderValue / timeline.sliderMaximumValue)
+            let percent = min(max(sliderValue / timeline.sliderMaximumValue, 0), 1)
+            targetTime = TimeInterval(percent) * player.duration
+            print("[SomePlayerDebug][ViewModel] commitSeek percent path percent=\(percent) targetTime=\(targetTime)")
+            holdSeekPosition(targetTime: targetTime)
+            player.seekPercently(to: percent)
         } else {
-            player.seek(to: TimeInterval(sliderValue))
+            targetTime = TimeInterval(sliderValue)
+            print("[SomePlayerDebug][ViewModel] commitSeek time path targetTime=\(targetTime)")
+            holdSeekPosition(targetTime: targetTime)
+            player.seek(to: targetTime)
         }
     }
 
@@ -194,6 +215,13 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func reload() {
+        detachPlayer()
+        state = .initializing
+        timeline = Self.emptyTimeline
+        sliderValue = 0
+        isSeeking = false
+        clearPendingSeek()
+        appliedRate = 1
         savedSeconds = 0
         errorMessage = nil
         title = "Loading stream..."
@@ -201,14 +229,68 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         album = ""
         artwork = nil
         selectedMode = .none
-        player.openRemote(streamURL)
+        player = SomePlayer(.progressiveDownload)
+        configurePlayer()
     }
 
     private func applyTimeline() {
         timeline = player.timelineState
-        if !isSeeking {
+        guard !isSeeking else { return }
+        if shouldKeepPendingSeekPosition() {
+            print("[SomePlayerDebug][ViewModel] applyTimeline holding pending slider=\(String(describing: pendingSeekSliderValue)) current=\(timeline.currentTime) target=\(String(describing: pendingSeekTargetTime)) state=\(state)")
+            sliderValue = pendingSeekSliderValue ?? sliderValue
+        } else {
+            if pendingSeekTargetTime != nil {
+                print("[SomePlayerDebug][ViewModel] applyTimeline clearing pending current=\(timeline.currentTime) target=\(String(describing: pendingSeekTargetTime)) slider=\(timeline.sliderValue)")
+            }
+            clearPendingSeek()
             sliderValue = timeline.sliderValue
         }
+    }
+
+    private func holdSeekPosition(targetTime: TimeInterval) {
+        pendingSeekSliderValue = sliderValue
+        pendingSeekTargetTime = targetTime
+        pendingSeekDeadline = Date().addingTimeInterval(5)
+    }
+
+    private func shouldKeepPendingSeekPosition() -> Bool {
+        guard let targetTime = pendingSeekTargetTime,
+              let deadline = pendingSeekDeadline else {
+            return false
+        }
+        if Date() > deadline {
+            return false
+        }
+        return abs(timeline.currentTime - targetTime) > 1
+    }
+
+    private func clearPendingSeek() {
+        pendingSeekSliderValue = nil
+        pendingSeekTargetTime = nil
+        pendingSeekDeadline = nil
+    }
+
+    private func configurePlayer() {
+        print("[SomePlayerDebug][ViewModel] configurePlayer url=\(streamURL.absoluteString)")
+        player.delegate = self
+        player.baseRate = baseRate
+        player.pitch = pitch
+        player.globalGain = voiceBoost ? 10 : 0
+        player.silenceHandlingType = selectedMode
+        player.addRateObserver(withId: "swiftui-example") { [weak self] rate in
+            Task { @MainActor in
+                self?.appliedRate = rate
+            }
+        }
+        player.openRemote(streamURL)
+    }
+
+    private func detachPlayer() {
+        print("[SomePlayerDebug][ViewModel] detachPlayer")
+        player.pause()
+        player.removeRateObserver(withId: "swiftui-example")
+        player.delegate = nil
     }
 
     private func configureAudioSessionIfNeeded(platform: Platform) {
@@ -227,61 +309,108 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
 
 extension PlayerDemoViewModel: SomeplayerEngineDelegate {
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL) {
-        Task { @MainActor in self.applyTimeline() }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] download progress total=\(progress) task=\(currentProgress) offset=\(self.player.offset) hasBytes=\(self.player.hasBytes) totalSize=\(self.player.totalSize)")
+            self.applyTimeline()
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState) {
         Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] state=\(state) current=\(self.timeline.currentTime) slider=\(self.sliderValue)")
             self.state = state
             self.applyTimeline()
         }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, updatedCurrentTime currentTime: TimeInterval) {
-        Task { @MainActor in self.applyTimeline() }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] currentTime=\(currentTime) sliderBefore=\(self.sliderValue) isSeeking=\(self.isSeeking)")
+            self.applyTimeline()
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, updatedDuration duration: TimeInterval) {
-        Task { @MainActor in self.applyTimeline() }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] duration=\(duration) timelineMaxBefore=\(self.timeline.sliderMaximumValue)")
+            self.applyTimeline()
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, savedSeconds: TimeInterval) {
-        Task { @MainActor in self.savedSeconds += savedSeconds }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.savedSeconds += savedSeconds
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, offsetChanged offset: Int64) {
-        Task { @MainActor in self.applyTimeline() }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] offsetChanged offset=\(offset)")
+            self.applyTimeline()
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, changedImage image: SomePlayerImage) {
-        Task { @MainActor in self.artwork = image }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.artwork = image
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, changedTitle title: String) {
-        Task { @MainActor in self.title = title }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.title = title
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, changedArtist artist: String) {
-        Task { @MainActor in self.artist = artist }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.artist = artist
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, changedAlbum album: String) {
-        Task { @MainActor in self.album = album }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.album = album
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, isBuffering: Bool) {
-        Task { @MainActor in self.isBuffering = isBuffering }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] buffering=\(isBuffering)")
+            self.isBuffering = isBuffering
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool) {
-        Task { @MainActor in self.isWaitingForDownloader = isWaitingForDownloader }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            print("[SomePlayerDebug][ViewModelDelegate] waitingForDownloader=\(isWaitingForDownloader)")
+            self.isWaitingForDownloader = isWaitingForDownloader
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL) {
-        Task { @MainActor in self.errorMessage = error.localizedDescription }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.errorMessage = error.localizedDescription
+        }
     }
 
     nonisolated func playerEngine(_ playerEngine: SomePlayerEngine, failedWithException exception: SomePlayerEngine.FailureType) {
-        Task { @MainActor in self.errorMessage = "Player failed: \(exception)" }
+        Task { @MainActor in
+            guard playerEngine === self.player else { return }
+            self.errorMessage = "Player failed: \(exception)"
+        }
     }
 }

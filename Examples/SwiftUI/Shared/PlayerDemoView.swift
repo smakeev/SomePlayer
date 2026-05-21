@@ -17,6 +17,7 @@ struct PlayerDemoView: View {
                 .padding(proxy.size.width < 700 ? 18 : 28)
                 .frame(maxWidth: 980, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                .foregroundStyle(Color.playerText)
             }
             .background(Color.playerBackground.ignoresSafeArea())
         }
@@ -29,10 +30,10 @@ struct PlayerDemoView: View {
                 Text(model.title)
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(2)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.playerText)
                 Text(metadataSubtitle)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.playerMuted)
                     .lineLimit(2)
                 HStack(spacing: 8) {
                     StatusPill(text: model.statusText, isActive: model.isPlaying)
@@ -84,14 +85,18 @@ struct PlayerDemoView: View {
                     Slider(
                         value: Binding(
                             get: { Double(model.sliderValue) },
-                            set: { model.updateSeekingValue(Float($0)) }
+                            set: {
+                                print("[SomePlayerDebug][UI] slider value changed value=\($0)")
+                                model.updateSeekingValue(Float($0))
+                            }
                         ),
                         in: 0...Double(max(model.timeline.sliderMaximumValue, 1)),
                         onEditingChanged: { editing in
+                            print("[SomePlayerDebug][UI] slider editing=\(editing) slider=\(model.sliderValue) max=\(model.timeline.sliderMaximumValue) canSeek=\(model.canSeek)")
                             editing ? model.beginSeeking() : model.commitSeek()
                         }
                     )
-                    .disabled(model.timeline.sliderMaximumValue <= 0)
+                    .disabled(!model.canSeek)
 
                     HStack {
                         Text(model.currentTimeText)
@@ -99,7 +104,7 @@ struct PlayerDemoView: View {
                         Text(model.durationText)
                     }
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.playerMuted)
                 }
 
                 Button(action: model.reload) {
@@ -117,7 +122,7 @@ struct PlayerDemoView: View {
             }
         }
         .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.playerPanel, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var silenceModes: some View {
@@ -127,21 +132,18 @@ struct PlayerDemoView: View {
             HStack(spacing: 10) {
                 ModeButton(
                     title: "Smart Speed",
-                    value: String(format: "%.2fx", model.appliedRate),
                     isSelected: model.selectedMode == .smart
                 ) {
                     model.toggleMode(.smart)
                 }
                 ModeButton(
                     title: "Speed Up Silence",
-                    value: "saved \(model.savedSecondsText)",
                     isSelected: model.selectedMode == .speedUp
                 ) {
                     model.toggleMode(.speedUp)
                 }
                 ModeButton(
                     title: "Adaptive Speed",
-                    value: String(format: "%.2fx", model.appliedRate),
                     isSelected: model.selectedMode == .adaptiveSpeed
                 ) {
                     model.toggleMode(.adaptiveSpeed)
@@ -198,28 +200,20 @@ struct PlayerDemoView: View {
 
 private struct ModeButton: View {
     let title: String
-    let value: String
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.82)
-                    .frame(height: 38)
-                Text(value)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-            }
-            .frame(maxWidth: .infinity, minHeight: 94)
-            .padding(.horizontal, 8)
-            .foregroundStyle(isSelected ? .white : .primary)
-            .background(isSelected ? Color.playerInk : Color.playerTile, in: RoundedRectangle(cornerRadius: 8))
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, minHeight: 76)
+                .padding(.horizontal, 8)
+                .foregroundStyle(isSelected ? Color.white : Color.playerText)
+                .background(isSelected ? Color.playerInk : Color.playerTile, in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
     }
@@ -240,7 +234,7 @@ private struct ControlRow: View {
                 Spacer()
                 Text(value)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.playerMuted)
                 Button(action: reset) {
                     Image(systemName: "arrow.uturn.backward")
                 }
@@ -265,9 +259,10 @@ private struct DetailTile: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.playerMuted)
             Text(value)
                 .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.playerText)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
@@ -287,14 +282,17 @@ private struct StatusPill: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(isActive ? Color.playerAccent.opacity(0.2) : Color.playerTile, in: Capsule())
-            .foregroundStyle(isActive ? Color.playerAccent : .secondary)
+            .foregroundStyle(isActive ? Color.playerAccentBright : Color.playerMuted)
     }
 }
 
 private extension Color {
-    static let playerBackground = Color(red: 0.94, green: 0.96, blue: 0.97)
-    static let playerPanel = Color(red: 0.98, green: 0.98, blue: 0.96)
-    static let playerTile = Color(red: 0.88, green: 0.90, blue: 0.91)
-    static let playerInk = Color(red: 0.14, green: 0.19, blue: 0.28)
-    static let playerAccent = Color(red: 0.05, green: 0.48, blue: 0.55)
+    static let playerBackground = Color(red: 0.08, green: 0.10, blue: 0.12)
+    static let playerPanel = Color(red: 0.13, green: 0.16, blue: 0.18)
+    static let playerTile = Color(red: 0.19, green: 0.23, blue: 0.26)
+    static let playerInk = Color(red: 0.10, green: 0.33, blue: 0.39)
+    static let playerAccent = Color(red: 0.12, green: 0.62, blue: 0.66)
+    static let playerAccentBright = Color(red: 0.41, green: 0.90, blue: 0.90)
+    static let playerText = Color(red: 0.94, green: 0.96, blue: 0.95)
+    static let playerMuted = Color(red: 0.66, green: 0.73, blue: 0.74)
 }

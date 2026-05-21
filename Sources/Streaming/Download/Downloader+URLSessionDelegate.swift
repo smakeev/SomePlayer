@@ -15,11 +15,15 @@ extension Downloader: URLSessionDataDelegate {
             self.totalBytesCount = response.expectedContentLength
 
             if let httpResponse = response as? HTTPURLResponse {
+                let acceptRanges = httpResponse.allHeaderFields["Accept-Ranges"] as? String
+                let contentRange = httpResponse.allHeaderFields["Content-Range"] as? String
                 if let _ = httpResponse.allHeaderFields["Accept-Ranges"] as? String {
                     self.delegate?.download(self, hasRangeHeader: true, totalSize: self.totalBytesCount)
                 } else {
                     self.delegate?.download(self, hasRangeHeader: false, totalSize: self.totalBytesCount)
                 }
+            } else {
+                print("[SomePlayerDebug][DownloaderDelegate] didReceive non-http response expected=\(response.expectedContentLength)")
             }
             completionHandler(.allow)
         }
@@ -30,6 +34,7 @@ extension Downloader: URLSessionDataDelegate {
         DispatchQueue.main.async {
             self.totalBytesReceived += Int64(data.count)
             self.progress = Float(self.totalBytesReceived) / Float(self.totalBytesCount)
+            print("[SomePlayerDebug][DownloaderDelegate] didReceive data bytes=\(data.count) totalReceived=\(self.totalBytesReceived) totalExpected=\(self.totalBytesCount) progress=\(self.progress)")
 
             self.delegate?.download(self, didReceiveData: data, progress: self.progress)
             self.progressHandler?(data, self.progress)
@@ -42,6 +47,7 @@ extension Downloader: URLSessionDataDelegate {
             if self.task === task {
                 self.state = .completed
             } else {
+                print("[SomePlayerDebug][DownloaderDelegate] didComplete ignored stale task error=\(String(describing: error))")
                 return
             }
             var errorToReturn: Error? = error
@@ -53,6 +59,7 @@ extension Downloader: URLSessionDataDelegate {
                     self.state = .completedWithError
                 }
             }
+            print("[SomePlayerDebug][DownloaderDelegate] didComplete error=\(String(describing: errorToReturn)) totalReceived=\(self.totalBytesReceived) response=\(String(describing: task.response))")
 
             self.delegate?.download(self, completedWithError: errorToReturn, bytesReceived: self.self.totalBytesReceived, dataTask: task)
             self.completionHandler?(errorToReturn)

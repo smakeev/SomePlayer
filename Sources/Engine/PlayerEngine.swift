@@ -286,9 +286,15 @@ open class SomePlayerEngine: NSObject {
     public func resume() {
         guard !fileDownloaded else { return }
         if self.downloadingPolicy == .progressiveDownload {
-            resumableData = nil
-            hasBytes = 0
-            streamer.url = self.url
+            if let resumableData {
+                print("[SomePlayerDebug][Engine] resume progressive using resumable offset=\(resumableData.offset) readyData=\(resumableData.readyData)")
+                streamer.resume(resumableData)
+            } else {
+                print("[SomePlayerDebug][Engine] resume progressive from original url")
+                hasBytes = 0
+                streamer.url = self.url
+            }
+            return
         }
 
         if resumableData == nil {
@@ -545,16 +551,16 @@ open class SomePlayerEngine: NSObject {
         }
 
         //make offset and restart downloading
-        if downloadingPolicy == .stream {
+        if downloadingPolicy == .stream || downloadingPolicy == .progressiveDownload {
             offset = Int64(Float(totalSize) * percent) + headerSize
             resumableData = ResumableData(offset: offset)
+            print("[SomePlayerDebug][Engine] seekPercently range restart offset=\(offset) percent=\(percent) totalSizeWithoutHeader=\(totalSize) headerSize=\(headerSize)")
+            streamer.progressiveSeek = 0
+            streamer.waitForProgress = 0
+            streamer.progressiveInPlay = false
             restart()
         } else if downloadingPolicy == .predownload {
             seek(to: 0) //we should not be here. Make sure seek is available only on .ready state.
-        } else { //progressive download
-            let whereToSeek = self.duration * Double(percent)
-            streamer.progressiveSeek = whereToSeek
-            streamer.waitForProgress = percent
         }
     }
 
