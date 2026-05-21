@@ -93,9 +93,6 @@ struct PlayerDemoView: View {
                             get: { Double(model.sliderValue) },
                             set: {
                                 print("[SomePlayerDebug][UI] slider value changed value=\($0) isSeeking=\(model.isSeeking)")
-                                if !model.isSeeking {
-                                    model.beginSeeking()
-                                }
                                 model.updateSeekingValue(Float($0))
                             }
                         ),

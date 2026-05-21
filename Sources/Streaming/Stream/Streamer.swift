@@ -576,7 +576,7 @@ open class Streamer: Streaming {
     }
 
     func notifyTimeUpdated() {
-        guard engine.isRunning, playerEngineNode.isPlaying else {
+        guard engine.isRunning, state == .playing else {
             return
         }
 

@@ -284,34 +284,30 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
 
     private func applyTimeline() {
         timeline = player.timelineState
-        guard !isSeeking else { return }
-        if shouldKeepPendingSeekPosition() {
-            print("[SomePlayerDebug][ViewModel] applyTimeline holding pending slider=\(String(describing: pendingSeekSliderValue)) current=\(timeline.currentTime) target=\(String(describing: pendingSeekTargetTime)) state=\(state)")
+        resolveFinishedSeekIfNeeded()
+        guard !isSeeking else {
             sliderValue = pendingSeekSliderValue ?? sliderValue
-        } else {
-            if pendingSeekTargetTime != nil {
-                print("[SomePlayerDebug][ViewModel] applyTimeline clearing pending current=\(timeline.currentTime) target=\(String(describing: pendingSeekTargetTime)) slider=\(timeline.sliderValue)")
-            }
-            clearPendingSeek()
-            sliderValue = timeline.sliderValue
+            return
         }
+        clearPendingSeek()
+        sliderValue = timeline.sliderValue
     }
 
     private func holdSeekPosition(targetTime: TimeInterval) {
         pendingSeekSliderValue = sliderValue
         pendingSeekTargetTime = targetTime
-        pendingSeekDeadline = Date().addingTimeInterval(5)
+        pendingSeekDeadline = Date().addingTimeInterval(0.5)
     }
 
-    private func shouldKeepPendingSeekPosition() -> Bool {
-        guard let targetTime = pendingSeekTargetTime,
+    private func resolveFinishedSeekIfNeeded() {
+        guard isSeeking,
+              let targetTime = pendingSeekTargetTime,
               let deadline = pendingSeekDeadline else {
-            return false
+            return
         }
-        if Date() > deadline {
-            return false
+        if abs(timeline.currentTime - targetTime) <= 1 || Date() > deadline {
+            isSeeking = false
         }
-        return abs(timeline.currentTime - targetTime) > 1
     }
 
     private func clearPendingSeek() {
