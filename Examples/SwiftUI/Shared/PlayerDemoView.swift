@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PlayerDemoView: View {
     @ObservedObject var model: PlayerDemoViewModel
+    @State private var showingDownloadingPolicyPicker = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -20,6 +21,11 @@ struct PlayerDemoView: View {
                 .foregroundStyle(Color.playerText)
             }
             .background(Color.playerBackground.ignoresSafeArea())
+            .sheet(isPresented: $showingDownloadingPolicyPicker) {
+                DownloadingPolicySheet(model: model)
+                    .presentationDetents([.fraction(0.2), .medium])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -120,7 +126,17 @@ struct PlayerDemoView: View {
                         .frame(width: 42, height: 42)
                 }
                 .buttonStyle(.bordered)
+
             }
+            Button {
+                showingDownloadingPolicyPicker = true
+            } label: {
+                Label("Policy: \(model.downloadingPolicyTitle)", systemImage: "arrow.down.circle")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 38)
+            }
+            .buttonStyle(.bordered)
+
             if let error = model.errorMessage {
                 Text(error)
                     .font(.footnote)
@@ -191,6 +207,7 @@ struct PlayerDemoView: View {
             DetailTile(title: "Saved", value: model.savedSecondsText)
             DetailTile(title: "Sample rate", value: model.sampleRateText)
             DetailTile(title: "Range requests", value: model.rangeHeaderText)
+            DetailTile(title: "Policy", value: model.downloadingPolicyTitle)
             DetailTile(title: "Current task", value: model.statusText)
             DetailTile(title: "URL", value: model.streamURL.host() ?? "remote")
         }
@@ -202,6 +219,54 @@ struct PlayerDemoView: View {
         #elseif canImport(AppKit)
         Image(nsImage: image)
         #endif
+    }
+}
+
+private struct DownloadingPolicySheet: View {
+    @ObservedObject var model: PlayerDemoViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Download policy")
+                .font(.headline)
+                .foregroundStyle(Color.playerText)
+
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(model.downloadingPolicyOptions) { option in
+                        Button {
+                            model.selectDownloadingPolicy(option.policy)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: model.downloadingPolicy == option.policy ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(model.downloadingPolicy == option.policy ? Color.playerAccentBright : Color.playerMuted)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(option.title)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(Color.playerText)
+                                    Text(option.detail)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.playerMuted)
+                                        .lineLimit(2)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.playerTile, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.playerPanel.ignoresSafeArea())
     }
 }
 

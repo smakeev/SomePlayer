@@ -564,7 +564,7 @@ open class SomePlayerEngine: NSObject {
             return
         }
 
-        if percent == 1 {
+        if percent == 1 && downloadingPolicy != .progressiveDownload {
             offset = headerSize
             resumableData = nil
             try! self.streamer.seek(to: 0, internalUse: true)
@@ -578,8 +578,14 @@ open class SomePlayerEngine: NSObject {
             return
         }
 
-        //make offset and restart downloading
-        if downloadingPolicy == .stream || downloadingPolicy == .progressiveDownload {
+        if downloadingPolicy == .progressiveDownload {
+            let targetTime = TimeInterval(percent) * duration
+            streamer.progressiveSeek = targetTime
+            streamer.waitForProgress = percent
+            if state == .paused {
+                delegate?.playerEngine(self, updatedCurrentTime: targetTime)
+            }
+        } else if downloadingPolicy == .stream {
             offset = Int64(Float(totalSize) * percent) + headerSize
             resumableData = ResumableData(offset: offset)
             print("[SomePlayerDebug][Engine] seekPercently range restart offset=\(offset) percent=\(percent) totalSizeWithoutHeader=\(totalSize) headerSize=\(headerSize)")

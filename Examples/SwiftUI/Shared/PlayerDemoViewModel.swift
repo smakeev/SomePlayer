@@ -14,7 +14,32 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         case macOS
     }
 
+    struct DownloadingPolicyOption: Identifiable {
+        let policy: SomePlayerEngine.PlayerEngineDownloadingPolicy
+        let title: String
+        let detail: String
+
+        var id: Int { policy.rawValue }
+    }
+
     let streamURL = URL(string: "https://traffic.libsyn.com/secure/syntax/Syntax_-_899.mp3")!
+    let downloadingPolicyOptions: [DownloadingPolicyOption] = [
+        DownloadingPolicyOption(
+            policy: .stream,
+            title: "Stream",
+            detail: "Play while downloading and restart from the seek position when range requests are available."
+        ),
+        DownloadingPolicyOption(
+            policy: .progressiveDownload,
+            title: "Progressive",
+            detail: "Play while downloading and wait for the current download to reach far seek positions."
+        ),
+        DownloadingPolicyOption(
+            policy: .predownload,
+            title: "Predownload",
+            detail: "Wait for full download before reporting ready."
+        )
+    ]
 
     @Published private(set) var state: SomePlayerEngine.PlayerEngineState = .undefined
     @Published private(set) var timeline = PlayerDemoViewModel.emptyTimeline
@@ -61,7 +86,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     @Published var sliderValue: Float = 0
     @Published var isSeeking = false
 
-    private var player = SomePlayer(.progressiveDownload)
+    private var player = SomePlayer()
     private var pendingSeekSliderValue: Float?
     private var pendingSeekTargetTime: TimeInterval?
     private var pendingSeekDeadline: Date?
@@ -146,6 +171,14 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         "\(Int((timeline.downloadProgress * 100).rounded()))%"
     }
 
+    var downloadingPolicyTitle: String {
+        title(for: downloadingPolicy)
+    }
+
+    var downloadingPolicy: SomePlayerEngine.PlayerEngineDownloadingPolicy {
+        player.downloadingPolicy
+    }
+
     var sampleRateText: String {
         guard let sampleRate = player.sampleRate else { return "unknown" }
         return "\(Int(sampleRate.rounded())) Hz"
@@ -174,6 +207,18 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
 
     func toggleMode(_ mode: SomeSilenceSkippingMode) {
         selectedMode = selectedMode == mode ? .none : mode
+    }
+
+    func selectDownloadingPolicy(_ policy: SomePlayerEngine.PlayerEngineDownloadingPolicy) {
+        guard policy != player.downloadingPolicy else { return }
+        let oldPlayer = player
+        oldPlayer.pause()
+        oldPlayer.removeRateObserver(withId: "swiftui-example")
+        oldPlayer.delegate = nil
+
+        resetPlaybackUI(clearSilenceMode: false)
+        player = SomePlayer(policy)
+        configurePlayer()
     }
 
     func beginSeeking() {
@@ -215,6 +260,11 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func reload() {
+        resetPlaybackUI(clearSilenceMode: true)
+        player.reset()
+    }
+
+    private func resetPlaybackUI(clearSilenceMode: Bool) {
         state = .initializing
         timeline = Self.emptyTimeline
         sliderValue = 0
@@ -227,8 +277,9 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         artist = "Syntax"
         album = ""
         artwork = nil
-        selectedMode = .none
-        player.reset()
+        if clearSilenceMode {
+            selectedMode = .none
+        }
     }
 
     private func applyTimeline() {
@@ -270,7 +321,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     private func configurePlayer() {
-        print("[SomePlayerDebug][ViewModel] configurePlayer url=\(streamURL.absoluteString)")
+        print("[SomePlayerDebug][ViewModel] configurePlayer policy=\(downloadingPolicy) url=\(streamURL.absoluteString)")
         player.delegate = self
         player.baseRate = baseRate
         player.pitch = pitch
@@ -282,6 +333,10 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
             }
         }
         player.openRemote(streamURL)
+    }
+
+    private func title(for policy: SomePlayerEngine.PlayerEngineDownloadingPolicy) -> String {
+        downloadingPolicyOptions.first { $0.policy == policy }?.title ?? "Unknown"
     }
 
     private func configureAudioSessionIfNeeded(platform: Platform) {
