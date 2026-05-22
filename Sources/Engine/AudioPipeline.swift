@@ -2,14 +2,10 @@
 //  AudioPipeline.swift
 //  SomePlayer
 //
-//  Actor isolated to `AudioExecutor`. Holds long-running audio-side Tasks
-//  (scheduling tick, volume ramp, future download consumer, etc.) keyed by
-//  purpose so a new task of the same kind cancels and replaces the previous.
-//
-//  Phase 2 introduces the actor with a minimal task-keeper API. Later phases
-//  move parser/reader/scheduling state into the actor itself.
-//
-//  See THREADING_PLAN.md.
+//  Actor isolated to `AudioExecutor`. Owns long-running audio-side tasks
+//  (scheduling tick, volume ramp, download consumer, command bodies) keyed
+//  by purpose so a new task of the same kind cancels and replaces the
+//  previous in-flight one.
 //
 
 import Foundation

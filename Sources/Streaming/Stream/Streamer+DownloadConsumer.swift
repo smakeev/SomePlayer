@@ -2,13 +2,9 @@
 //  Streamer+DownloadConsumer.swift
 //  SomePlayer
 //
-//  Consumer-side translation of `DownloadEvent` into the streamer's existing
-//  pipeline (parser feed, reader creation, downstream delegate notifications).
-//  Invoked from a Task on the audio pipeline's executor — see
-//  `setupAudioEngine` in Streamer.swift.
-//
-//  Replaces the prior `Streamer: DownloadingDelegate` conformance, which
-//  forced every callback through the main thread.
+//  Translates `DownloadEvent` values yielded by the downloader's AsyncStream
+//  into parser/reader feeding and downstream delegate notifications. Invoked
+//  from a Task on the audio pipeline's executor (see `setupAudioEngine`).
 //
 
 import Foundation
@@ -45,7 +41,8 @@ extension Streamer {
         do {
             try parser.parse(data: data)
         } catch {
-            // Logged at the parser layer; ignore here to preserve stream consumption.
+            // Parse errors propagate via the parser's own diagnostics; the
+            // consumer loop continues so subsequent chunks still flow.
         }
 
         // Lazily create the reader once the parser has discovered the data format.

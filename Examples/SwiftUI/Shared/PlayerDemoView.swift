@@ -16,6 +16,9 @@ struct PlayerDemoView: View {
                     silenceModes
                     tuningControls
                     streamDetails
+                    #if DEBUG
+                    debugControls
+                    #endif
                 }
                 .padding(proxy.size.width < 700 ? 18 : 28)
                 .frame(maxWidth: 980, alignment: .leading)
@@ -217,6 +220,59 @@ struct PlayerDemoView: View {
             DetailTile(title: "URL", value: model.streamURL.host() ?? "remote")
         }
     }
+
+    #if DEBUG
+    private var debugControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Debug", systemImage: "ladybug.fill")
+                    .font(.headline)
+                Spacer()
+                if model.simulatedDownloadDelayMs > 0 {
+                    Text("\(Int(model.simulatedDownloadDelayMs)) ms")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.playerAccentBright)
+                } else {
+                    Text("off")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.playerMuted)
+                }
+            }
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Throttle download")
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Button("Off") {
+                        model.simulatedDownloadDelayMs = 0
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(model.simulatedDownloadDelayMs == 0)
+                }
+                Slider(
+                    value: $model.simulatedDownloadDelayMs,
+                    in: 0...2000,
+                    step: 25
+                )
+                HStack {
+                    Text("0 ms")
+                    Spacer()
+                    Text("Adds a sleep per downloaded chunk to simulate slow networks.")
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    Spacer()
+                    Text("2000 ms")
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.playerMuted)
+            }
+        }
+        .padding(18)
+        .background(Color.playerPanel, in: RoundedRectangle(cornerRadius: 8))
+    }
+    #endif
 
     private func platformImage(_ image: SomePlayerImage) -> Image {
         #if canImport(UIKit)

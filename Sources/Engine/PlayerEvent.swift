@@ -2,15 +2,14 @@
 //  PlayerEvent.swift
 //  SomePlayer
 //
-//  Public event stream payloads emitted by `SomePlayerEngine.subscribe()`.
-//  See THREADING_PLAN.md for the broader context.
+//  Public event-stream payloads emitted by `SomePlayerEngine.subscribe()`.
 //
 
 import Foundation
 import AVFoundation
 
-/// A `Sendable` snapshot of audio data captured from the engine's main-mixer tap.
-/// Replaces direct exposure of `AVAudioPCMBuffer` (non-Sendable) across thread boundaries.
+/// A `Sendable` snapshot of audio data captured from the engine's main-mixer
+/// tap. Safe to ship across thread boundaries (unlike `AVAudioPCMBuffer`).
 public struct AudioBufferSnapshot: Sendable {
     /// Per-channel float samples. Outer array is channel index, inner array is frames.
     public let samples: [[Float]]
@@ -49,9 +48,9 @@ public struct AudioBufferSnapshot: Sendable {
     }
 }
 
-/// Every observable event emitted by `SomePlayerEngine`. Delivered at full rate via
-/// the `AsyncStream` returned from `subscribe()`. The `@MainActor` delegate receives a
-/// coalesced/throttled subset (see THREADING_PLAN.md §"Delegate throttling").
+/// Every observable event emitted by `SomePlayerEngine`. Delivered at full
+/// rate via the `AsyncStream` returned from `subscribe()`. The `@MainActor`
+/// delegate receives a coalesced/throttled subset of the same information.
 public enum PlayerEvent: Sendable {
     case stateChanged(SomePlayerEngine.PlayerEngineState)
     case currentTimeUpdated(TimeInterval)

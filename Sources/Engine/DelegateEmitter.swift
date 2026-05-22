@@ -7,17 +7,12 @@
 //  Pattern:
 //    - Engine code calls `enqueueXxx(...)` from any thread (`nonisolated`,
 //      lock-protected; no thread-hop, no allocation in the hot path).
-//    - A single `Task.sleep(100ms)` loop on `@MainActor` drains pending
-//      events and fires per-event-type delegate calls.
+//    - A single `Task.sleep` loop on `@MainActor` drains pending events
+//      every ~100 ms and fires per-event-type delegate calls.
 //    - Scalar high-frequency fields (time/duration/progress/rate/etc.) are
-//      coalesce-latest: only the most recent value is delivered.
+//      coalesce-latest: only the most recent value is delivered per tick.
 //    - Edge-triggered events (state, errors, seek-failed) are FIFO and
 //      never coalesced or dropped.
-//
-//  The AsyncStream pathway (`SomePlayerEngine.subscribe()`) is independent
-//  and runs at full rate; this emitter is the throttled main-thread channel.
-//
-//  See THREADING_PLAN.md §"Delegate throttling".
 //
 
 import Foundation

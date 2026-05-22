@@ -33,8 +33,6 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     //     1. We've reached the end of the packet data and the file has been completely parsed
     //     2. We've reached the end of the data we currently have downloaded, but not the file
     //
-    // (Fixed off-by-one: previous `>= packets.count - 1` left the last
-    // packet unread and could mis-handle edge transitions.)
     let packetIndex = Int(reader.currentPacket)
     let packets = reader.parser.packets
     if packetIndex >= packets.count {
@@ -46,11 +44,10 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
         }
     }
 
-    // Defensive guards: the read() body just appended an empty entry to
-    // both arrays before this callback fired, so count should be >= 1.
-    // If it's not (a race surfaces, or a reset removed entries between
-    // converter iterations), bail out cleanly instead of crashing on a
-    // negative subscript.
+    // `read()` appends an empty slot to both arrays before invoking the
+    // converter, so count is expected to be >= 1. Bail out cleanly if
+    // that invariant is ever broken instead of trapping on a negative
+    // subscript.
     guard reader.buffers.count > 0, reader.bufferDescriptions.count > 0 else {
         return ReaderNotEnoughDataError
     }

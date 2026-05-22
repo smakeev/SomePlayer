@@ -13,8 +13,7 @@ public protocol Downloading: AnyObject, Sendable {
     // MARK: - Properties
 
     /// Async stream of download events. Single-iteration — only one consumer
-    /// per `Downloading` instance. Replaces the prior `DownloadingDelegate`
-    /// pattern; see `DownloadEvent`.
+    /// per `Downloading` instance. See `DownloadEvent` for the payloads.
     var events: AsyncStream<DownloadEvent> { get }
 
     /// A completion block for when the contents of the download are fully downloaded.
@@ -28,6 +27,11 @@ public protocol Downloading: AnyObject, Sendable {
 
     /// A `URL` representing the current URL the downloader is fetching. This is an optional because this protocol is designed to allow classes implementing the `Downloading` protocol to be used as singletons for many different URLS so a common cache can be used to redownloading the same resources.
     var url: URL? { get set }
+
+    /// If non-zero, the downloader sleeps for this many milliseconds
+    /// between each `URLSession` data chunk before yielding it to the event
+    /// stream. Default is 0 (no throttling).
+    var simulatedChunkDelayMilliseconds: UInt { get set }
 
     // MARK: - Methods
 

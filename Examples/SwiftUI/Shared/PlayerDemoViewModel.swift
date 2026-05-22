@@ -86,6 +86,20 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     @Published var sliderValue: Float = 0
     @Published var isSeeking = false
 
+    /// Debug-only download-throttle slider value (ms). Pushed to the engine
+    /// on change. Surfaced in the UI under `#if DEBUG` only; the engine API
+    /// itself is always available.
+    @Published var simulatedDownloadDelayMs: Double = 0 {
+        didSet {
+            let clamped = max(0, min(simulatedDownloadDelayMs, 5000))
+            if clamped != simulatedDownloadDelayMs {
+                simulatedDownloadDelayMs = clamped
+                return
+            }
+            player.simulatedDownloadChunkDelayMilliseconds = UInt(clamped)
+        }
+    }
+
     private var player = SomePlayer()
     private var isDraggingSlider = false
 
@@ -316,6 +330,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         player.pitch = pitch
         player.globalGain = voiceBoost ? 10 : 0
         player.silenceHandlingType = selectedMode
+        player.simulatedDownloadChunkDelayMilliseconds = UInt(simulatedDownloadDelayMs)
 
         // Subscribe to the full-rate event stream and hop to MainActor for
         // SwiftUI-bound state. The throttled @MainActor delegate also fires

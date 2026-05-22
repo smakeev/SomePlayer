@@ -12,9 +12,9 @@ import os.log
 
 /// The `Reader` is a concrete implementation of the `Reading` protocol and is intended to provide the audio data provider for an `AVAudioEngine`. The `parser` property provides a `Parseable` that handles converting binary audio data into audio packets in whatever the original file's format was (MP3, AAC, WAV, etc). The reader handles converting the audio data coming from the parser to a LPCM format that can be used in the context of `AVAudioEngine` since the `AVAudioplayerEngineNode` requires we provide `AVAudioPCMBuffer` in the `scheduleBuffer` methods.
 ///
-/// `@unchecked Sendable`: all mutating access is serialised by the audio
-/// pipeline's executor (Phase 2). The internal `queue.sync` in `read`/`seek`
-/// is kept as belt-and-suspenders for now.
+/// `@unchecked Sendable`: every mutating entry point (`read`, `seek`,
+/// `freeBuffer`) serialises on the private `queue`, so concurrent callers
+/// see consistent buffer state.
 public class Reader: Reading, @unchecked Sendable {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Reader")
     static let loggerConverter = OSLog(subsystem: "com.fastlearner.streamer", category: "Reader.Converter")
@@ -23,9 +23,9 @@ public class Reader: Reading, @unchecked Sendable {
     public internal(set) var buffers = [[UnsafeMutableRawPointer]]()
     public internal(set) var bufferDescriptions = [[UnsafeMutablePointer<AudioStreamPacketDescription>]]()
 
-    /// Frees the oldest scheduled buffer's backing memory. Now wrapped in
-    /// the same `queue.sync` that protects `read`/`seek` so the converter
-    /// callback can't observe a partial mutation (audit #5 closed).
+    /// Frees the oldest scheduled buffer's backing memory. Wrapped in the
+    /// same `queue.sync` as `read`/`seek` so the converter callback can't
+    /// observe a partial mutation.
     public func freeBuffer() {
         queue.sync {
             guard buffers.count > 0 else { return }
@@ -102,9 +102,8 @@ public class Reader: Reading, @unchecked Sendable {
 
         // Try to read the frames from the parser
         try queue.sync {
-            // Audit #36: use Unmanaged for the opaque pointer round-trip
-            // instead of `unsafeBitCast`; clearer refcount semantics and
-            // robust against ARC reorderings the compiler might apply.
+            // Opaque-pointer round-trip with explicit unretained semantics;
+            // safer than `unsafeBitCast` against any ARC reorderings.
             let context = Unmanaged.passUnretained(self).toOpaque()
             self.buffers.append([UnsafeMutableRawPointer]())
             self.bufferDescriptions.append([UnsafeMutablePointer<AudioStreamPacketDescription>]())

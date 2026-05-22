@@ -2,13 +2,10 @@
 //  AudioExecutor.swift
 //  SomePlayer
 //
-//  Custom `SerialExecutor` backed by a dedicated dispatch queue.
-//  Used as the isolation domain for `AudioPipeline` (the actor that owns
-//  all engine-side streaming state). Pins audio work to one serial queue
-//  so AVAudioEngine config, C callbacks, and scheduling all run off-main
-//  and in a deterministic order.
-//
-//  See THREADING_PLAN.md.
+//  Custom `SerialExecutor` backed by a dedicated dispatch queue. Used as
+//  the isolation domain for `AudioPipeline`. Pins all engine-side audio
+//  work to one serial queue so AVAudioEngine config, C callbacks, and
+//  scheduling run off-main and in a deterministic order.
 //
 
 import Foundation

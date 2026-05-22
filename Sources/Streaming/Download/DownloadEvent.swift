@@ -2,12 +2,9 @@
 //  DownloadEvent.swift
 //  SomePlayer
 //
-//  Events emitted by `Downloader` via its `events: AsyncStream<DownloadEvent>`.
-//  Replaces the `DispatchQueue.main.async` + `DownloadingDelegate` pattern —
-//  consumers iterate the stream from a Task pinned to the executor of their
-//  choice (the audio pipeline, for the streamer).
-//
-//  See THREADING_PLAN.md.
+//  Events emitted by `Downloader` via `events: AsyncStream<DownloadEvent>`.
+//  Consumers iterate the stream from a Task isolated to whichever executor
+//  they want the work to land on.
 //
 
 import Foundation

@@ -11,16 +11,13 @@ import os.log
 
 /// The `Streamer` is a concrete implementation of the `Streaming` protocol and is intended to provide a high-level, extendable class for streaming an audio file living at a URL on the internet. Subclasses can override the `attachNodes` and `connectNodes` methods to insert custom effects.
 ///
-/// Marked `@unchecked Sendable` because access discipline (Phase 2+ of the
-/// threading refactor) guarantees all internal state is only ever touched
-/// from the `audioPipeline` actor's executor or from main-thread paths that
-/// will move there in subsequent phases. See THREADING_PLAN.md.
+/// `@unchecked Sendable`: internal state is only ever touched from the
+/// `audioPipeline` actor's executor.
 open class Streamer: Streaming, @unchecked Sendable {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Streamer")
 
-    /// Actor that hosts all audio-side long-running Tasks (scheduling tick,
-    /// volume ramp, future downloader consumer, etc.) on a dedicated serial
-    /// executor — replacing the previous `Timer`-on-main scheduling.
+    /// Hosts the audio-side long-running tasks (scheduling tick, volume
+    /// ramp, downloader consumer) on a dedicated serial executor.
     public let audioPipeline = AudioPipeline()
 
     // MARK: - Properties (Streaming)
@@ -161,10 +158,8 @@ open class Streamer: Streaming, @unchecked Sendable {
         // Prepare the engine
         engine.prepare()
 
-        // Drive buffer scheduling + time-update ticks from a Task pinned to
-        // the audio pipeline's serial executor (off the main thread).
-        // Cadence is ~100 Hz; the previous Timer ran ~1 kHz on main and
-        // starved UI work.
+        // Drive buffer scheduling + time-update ticks from a Task on the
+        // audio pipeline's serial executor at ~100 Hz.
         let pipeline = audioPipeline
         Task { [weak self] in
             await pipeline.startScheduling(interval: .milliseconds(10)) { [weak self] in
@@ -180,9 +175,8 @@ open class Streamer: Streaming, @unchecked Sendable {
             }
         }
 
-        // Consume the downloader's event stream on the audio executor.
-        // Replaces the prior delegate-based delivery, which forced every
-        // chunk through the main thread.
+        // Consume the downloader's event stream on the audio executor so
+        // parser/reader mutations all serialise on the same domain.
         let downloaderRef = downloader
         Task { [weak self] in
             await pipeline.run(.downloadConsumer) { [weak self] in
@@ -208,10 +202,9 @@ open class Streamer: Streaming, @unchecked Sendable {
     // MARK: - Reset
 
     deinit {
-        // Fire-and-forget cancellation of any in-flight audio Tasks.
-        // The pipeline is captured strongly so it outlives the deinit
-        // long enough for the cancellation to propagate; once tasks see
-        // `Task.isCancelled`, they exit and the pipeline is released.
+        // Fire-and-forget cancellation; the pipeline is captured strongly
+        // so it outlives the deinit long enough for the cancellation to
+        // propagate, after which it's released.
         let pipeline = audioPipeline
         Task { await pipeline.cancelAll() }
     }
@@ -409,8 +402,8 @@ open class Streamer: Streaming, @unchecked Sendable {
     func swellVolume(to newVolume: Float, duration: TimeInterval = 0.5) {
         volumeRampTargetValue = newVolume
         // The incremental ramp only steps up; for a zero/negative target,
-        // hard-snap to avoid both an infinite loop and the divide-by-zero
-        // in the step interval computation (audit #11).
+        // hard-snap — otherwise the step-interval division would underflow
+        // and the loop could spin forever.
         guard newVolume > 0 else {
             volume = max(0, newVolume)
             volumeRampTargetValue = nil
@@ -529,11 +522,10 @@ open class Streamer: Streaming, @unchecked Sendable {
             isBuffering = false
             isFileSchedulingComplete = false
             lastSteppedPacket += 1
-            // scheduleBuffer's completion fires on an internal AVAudio thread
-            // (not the real-time render thread). Hop back onto the audio
-            // pipeline so `lastSteppedPacket` and `reader.freeBuffer()` run
-            // in the same serial domain as `read(...)` — closes the
-            // cross-thread mutation of `Reader.buffers` (audit #5).
+            // scheduleBuffer's completion fires on an internal AVAudio
+            // thread (not the real-time render thread). Hop back onto the
+            // audio pipeline so `lastSteppedPacket` and `reader.freeBuffer`
+            // run in the same serial domain as `read(_:)`.
             let pipeline = audioPipeline
             playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self, reader] in
                 Task {

@@ -29,8 +29,8 @@ public class Downloader: NSObject, Downloading, @unchecked Sendable {
 
     // MARK: - Singleton
 
-    /// A singleton that can be used to perform multiple download requests using a common cache.
-    /// Scheduled for removal in Phase 5 of the threading refactor (see THREADING_PLAN.md).
+    /// A shared instance for clients that want to reuse one downloader (and
+    /// the shared URL cache) across multiple requests.
     nonisolated(unsafe) public static var shared: Downloader = Downloader()
 
     // MARK: - Properties
@@ -62,6 +62,11 @@ public class Downloader: NSObject, Downloading, @unchecked Sendable {
     public var completionHandler: ((Error?) -> Void)?
     public var progressHandler: ((Data, Float) -> Void)?
     public var progress: Float = 0
+
+    /// See `Downloading.simulatedChunkDelayMilliseconds`. Applied inside the
+    /// URLSession data callback; the sleep happens on the session's delegate
+    /// queue so subsequent chunks are paced accordingly.
+    public var simulatedChunkDelayMilliseconds: UInt = 0
     public var state: DownloadingState = .notStarted {
         didSet {
             eventsContinuation.yield(.stateChanged(state))

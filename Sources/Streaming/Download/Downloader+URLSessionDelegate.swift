@@ -4,11 +4,10 @@
 //
 //  Created by Syed Haris Ali on 1/6/18.
 //
-//  Phase 2 refactor: URLSession callbacks no longer hop to the main thread.
-//  Each callback yields a `DownloadEvent` into the downloader's AsyncStream
-//  and (for test back-compat) fires the existing handler closures. The
-//  consumer (see Streamer+DownloadConsumer.swift) iterates the stream on
-//  the audio pipeline's executor.
+//  URLSession delegate callbacks yield a `DownloadEvent` into the
+//  downloader's AsyncStream and fire the legacy handler closures. They run
+//  on URLSession's delegate queue; the AsyncStream consumer drives the
+//  events onto whichever executor it iterates on.
 //
 
 import Foundation
@@ -32,6 +31,13 @@ extension Downloader: URLSessionDataDelegate {
     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         totalBytesReceived += Int64(data.count)
         progress = totalBytesCount > 0 ? Float(totalBytesReceived) / Float(totalBytesCount) : 0
+
+        // Sleeping here blocks URLSession's delegate queue, so subsequent
+        // chunks are paced behind it.
+        if simulatedChunkDelayMilliseconds > 0 {
+            Thread.sleep(forTimeInterval: TimeInterval(simulatedChunkDelayMilliseconds) / 1000.0)
+        }
+
         eventsContinuation.yield(.data(data, progress: progress))
         progressHandler?(data, progress)
     }

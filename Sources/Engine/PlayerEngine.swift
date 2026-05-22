@@ -41,11 +41,10 @@ public extension SomeplayerEngineDelegate {
 }
 
 
-/// `@unchecked Sendable`: mutation paths that cross threads now route
-/// through `DelegateEmitter` (lock-protected, drained on `@MainActor`) or
-/// the audio pipeline's serial executor. Remaining property mutations
-/// happen on the caller's thread today and are scheduled to move onto
-/// the audio executor in Phase 3's command-queue work — see THREADING_PLAN.md.
+/// `@unchecked Sendable`: cross-thread mutation paths are funnelled through
+/// either the lock-protected `DelegateEmitter` (drained on `@MainActor`) or
+/// the audio pipeline's serial executor. Plain class storage carries the
+/// remaining state under that discipline.
 open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
     public enum FailureType: Sendable {
@@ -79,7 +78,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - Command queue (Phase 3)
+    // MARK: - Command queue
 
     /// Lock-protected cache of most-recently-set scalar values so sync
     /// getters reflect the latest setter call even though the actual AVAudio
@@ -125,6 +124,14 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     }
 
     public internal(set) var downloadingPolicy: PlayerEngineDownloadingPolicy
+
+    /// Inserts a fixed sleep between each downloaded chunk before it reaches
+    /// the engine. Default 0 (no throttling). Setting a non-zero value makes
+    /// the engine perceive the download as that much slower per chunk.
+    public var simulatedDownloadChunkDelayMilliseconds: UInt {
+        get { streamer.downloader.simulatedChunkDelayMilliseconds }
+        set { streamer.downloader.simulatedChunkDelayMilliseconds = newValue }
+    }
 
     public var volume: Float {
         get {
@@ -712,7 +719,6 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         if percent == 1 && downloadingPolicy != .progressiveDownload {
             offset = headerSize
             resumableData = nil
-            // Audit #15: replace `try!` with proper error routing.
             do {
                 try streamer.seek(to: 0, internalUse: true)
             } catch {
@@ -917,8 +923,8 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         stateSnapshot.withLock { $0.averagePowerForChannel1 }
     }
 
-    /// Sendable copy of the latest tap buffer. Replaces the prior racey
-    /// `lastBuffer: AVAudioPCMBuffer?` (audit #7).
+    /// Sendable copy of the most recent main-mixer tap buffer.
+    /// Lock-protected snapshot — safe to read from any thread.
     public var lastBufferSnapshot: AudioBufferSnapshot? {
         stateSnapshot.withLock { $0.lastBufferSnapshot }
     }
