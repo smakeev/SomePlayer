@@ -19,7 +19,8 @@ let package = Package(
             name: "SomePlayer",
             path: "Sources",
             swiftSettings: [
-                .swiftLanguageMode(.v5)
+                .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .testTarget(

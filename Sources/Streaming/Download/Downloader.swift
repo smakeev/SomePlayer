@@ -22,7 +22,8 @@ public class Downloader: NSObject, Downloading {
     // MARK: - Singleton
 
     /// A singleton that can be used to perform multiple download requests using a common cache.
-    public static var shared: Downloader = Downloader()
+    /// Scheduled for removal in Phase 5 of the threading refactor (see THREADING_PLAN.md).
+    nonisolated(unsafe) public static var shared: Downloader = Downloader()
 
     // MARK: - Properties
 

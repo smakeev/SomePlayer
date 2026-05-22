@@ -15,8 +15,6 @@ extension Downloader: URLSessionDataDelegate {
             self.totalBytesCount = response.expectedContentLength
 
             if let httpResponse = response as? HTTPURLResponse {
-                let acceptRanges = httpResponse.allHeaderFields["Accept-Ranges"] as? String
-                let contentRange = httpResponse.allHeaderFields["Content-Range"] as? String
                 if let _ = httpResponse.allHeaderFields["Accept-Ranges"] as? String {
                     self.delegate?.download(self, hasRangeHeader: true, totalSize: self.totalBytesCount)
                 } else {

@@ -31,18 +31,23 @@ public protocol SomeplayerEngineDelegate: AnyObject {
     func playerEngine(_ playerEngine: SomePlayerEngine, isWaitingForDownloader: Bool)
     func playerEngine(_ playerEngine: SomePlayerEngine, failedDownloadWithError error: Error, forURL url: URL)
     func playerEngine(_ playerEngine: SomePlayerEngine, failedWithException exception: SomePlayerEngine.FailureType)
+    func playerEngine(_ playerEngine: SomePlayerEngine, seekFailed error: Error)
+}
+
+public extension SomeplayerEngineDelegate {
+    func playerEngine(_ playerEngine: SomePlayerEngine, seekFailed error: Error) {}
 }
 
 
 open class SomePlayerEngine: NSObject {
 
-    public enum FailureType {
+    public enum FailureType: Sendable {
         case engineStart
         case scheduleBuffer
         case createParser
     }
 
-    public enum PlayerEngineState: Int {
+    public enum PlayerEngineState: Int, Sendable {
         case undefined    = 0
         case initializing
         case ready
@@ -52,7 +57,7 @@ open class SomePlayerEngine: NSObject {
         case failed
     }
 
-    public enum PlayerEngineDownloadingPolicy: Int {
+    public enum PlayerEngineDownloadingPolicy: Int, Sendable {
         case stream               = 0
         case predownload
         case progressiveDownload
@@ -119,6 +124,7 @@ open class SomePlayerEngine: NSObject {
             for observer in isGoodForStreamObservers.values {
                 observer(isGoodForStream)
             }
+            emit(.isGoodForStreamChanged(isGoodForStream))
         }
     }
     fileprivate var isGoodForStreamObservers: [String : (Bool)->Void] = [String : (Bool)->Void]()
@@ -138,6 +144,7 @@ open class SomePlayerEngine: NSObject {
                     if self.lastReportedState != self.state {
                         self.lastReportedState = self.state
                         self.delegate?.playerEngine(self, changedState: self.state)
+                        self.emit(.stateChanged(self.state))
                     }
                 }
             }
@@ -221,6 +228,7 @@ open class SomePlayerEngine: NSObject {
     public internal(set) var estimatedDuration: TimeInterval = 0 {
         didSet {
             self.delegate?.playerEngine(self, updatedDuration: self.duration)
+            emit(.durationUpdated(self.duration))
         }
     }
 
@@ -265,6 +273,7 @@ open class SomePlayerEngine: NSObject {
             resumableData = nil
             hasBytes = 0
             delegate?.playerEngine(self, offsetChanged: offset)
+            emit(.offsetChanged(offset))
             if aboutBitrate != 0 && offset != 0 {
                 timeOffset = Double((offset - headerSize) * 8) / aboutBitrate
             } else {
@@ -313,6 +322,40 @@ open class SomePlayerEngine: NSObject {
 
     weak public var delegate: SomeplayerEngineDelegate? = nil
 
+    // MARK: - Event subscribers
+
+    private var eventContinuations: [UUID: AsyncStream<PlayerEvent>.Continuation] = [:]
+
+    /// Returns a fresh `AsyncStream` of every engine event. Each call yields an
+    /// independent stream — events emitted after subscription are delivered to the
+    /// caller; nothing is replayed. All active streams are `finish()`-ed when the
+    /// engine is deallocated.
+    ///
+    /// Use this for full-rate observation (analytics, debug logging, custom UI
+    /// pipelines). For throttled `@MainActor` delivery, conform to
+    /// `SomeplayerEngineDelegate`.
+    public func subscribe() -> AsyncStream<PlayerEvent> {
+        let id = UUID()
+        return AsyncStream { continuation in
+            self.eventContinuations[id] = continuation
+            continuation.onTermination = { [weak self] _ in
+                self?.eventContinuations[id] = nil
+            }
+        }
+    }
+
+    fileprivate func emit(_ event: PlayerEvent) {
+        for continuation in eventContinuations.values {
+            continuation.yield(event)
+        }
+    }
+
+    deinit {
+        for continuation in eventContinuations.values {
+            continuation.finish()
+        }
+    }
+
     lazy public internal(set) var streamer: TimePitchStreamer = {
         let streamer = TimePitchStreamer()
         if self.downloadingPolicy == .progressiveDownload {
@@ -340,24 +383,28 @@ open class SomePlayerEngine: NSObject {
         didSet {
             guard let validTitle = title else { return }
             delegate?.playerEngine(self, changedTitle: validTitle)
+            emit(.titleChanged(validTitle))
         }
     }
     public private(set) var artist: String? {
         didSet {
             guard let validArtist = artist else { return }
             delegate?.playerEngine(self, changedArtist: validArtist)
+            emit(.artistChanged(validArtist))
         }
     }
     public private(set) var album: String? {
         didSet {
             guard let validAlbum = album else { return }
             delegate?.playerEngine(self, changedAlbum: validAlbum)
+            emit(.albumChanged(validAlbum))
         }
     }
     public private(set) var image: SomePlayerImage? {
         didSet {
             guard let validImage = image else { return }
             delegate?.playerEngine(self, changedImage: validImage)
+            emit(.imageChanged(validImage))
         }
     }
 
@@ -522,7 +569,8 @@ open class SomePlayerEngine: NSObject {
             try streamer.seek(to: time)
         }
         catch {
-            ///
+            delegate?.playerEngine(self, seekFailed: error)
+            emit(.seekFailed(error))
         }
     }
 
@@ -584,6 +632,7 @@ open class SomePlayerEngine: NSObject {
             streamer.waitForProgress = percent
             if state == .paused {
                 delegate?.playerEngine(self, updatedCurrentTime: targetTime)
+                emit(.currentTimeUpdated(targetTime))
             }
         } else if downloadingPolicy == .stream {
             offset = Int64(Float(totalSize) * percent) + headerSize
@@ -643,6 +692,7 @@ open class SomePlayerEngine: NSObject {
             for observer in rateObservers.values {
                 observer(newValue)
             }
+            emit(.rateChanged(newValue))
         }
     }
 
@@ -686,6 +736,7 @@ open class SomePlayerEngine: NSObject {
                 let interval: Double = Double(frames) / validSampleRate
                 let savedSeconds: Double = Double(interval - (interval / Double(self.rate)))
                 self.delegate?.playerEngine(self, savedSeconds: savedSeconds)
+                self.emit(.savedSecondsUpdated(savedSeconds))
             }
         }
 
@@ -737,11 +788,13 @@ extension SomePlayerEngine: StreamingDelegate {
     public func streamer(_ streamer: Streaming, isWaitingDownloader waiting: Bool) {
         isWaitingForDownloader = waiting
         delegate?.playerEngine(self, isWaitingForDownloader: waiting)
+        emit(.waitingForDownloaderChanged(waiting))
     }
 
     public func streamer(_ streamer: Streaming, isBuffering: Bool) {
         self.isBuffering = isBuffering
         delegate?.playerEngine(self, isBuffering: isBuffering)
+        emit(.bufferingChanged(isBuffering))
     }
 
     public func streamer(_ streamer: Streaming, fileFinished url: URL) {
@@ -768,6 +821,7 @@ extension SomePlayerEngine: StreamingDelegate {
         hasError = true
         resumableData = ResumableData(offset: offset, response: response, readyData: bytes)
         delegate?.playerEngine(self, failedDownloadWithError: error, forURL: url)
+        emit(.downloadFailed(error: error, url: url))
     }
 
     public func streamer(_ streamer: Streaming, updatedDownloadProgress progress: Float, bytesReceived bytes: Int64, forURL url: URL) {
@@ -782,8 +836,10 @@ extension SomePlayerEngine: StreamingDelegate {
 			let totalProgress = Float(hasBytes) / Float(totalSize)
 			lastDownloadProgress = totalProgress
 			delegate?.playerEngine(self, updatedDownloadProgress: totalProgress, currentTaskProgress: progress, forURL: url)
+			emit(.downloadProgressUpdated(progress: totalProgress, taskProgress: progress, url: url))
 		}
         delegate?.playerEngine(self, updatedDuration: duration)
+        emit(.durationUpdated(duration))
     }
 
     public func streamer(_ streamer: Streaming, changedState state: StreamingState) {
@@ -807,6 +863,9 @@ extension SomePlayerEngine: StreamingDelegate {
 
             mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
                 self.lastBuffer = buffer
+                if let snapshot = AudioBufferSnapshot(from: buffer, sampleTime: when.sampleTime) {
+                    self.emit(.audioBufferTap(snapshot))
+                }
                 self.handlePowerLevels(SilenceAudioAnalyzer.powerLevels(from: buffer))
             }
 
@@ -820,11 +879,13 @@ extension SomePlayerEngine: StreamingDelegate {
     public func streamer(_ streamer: Streaming, updatedCurrentTime currentTime: TimeInterval) {
         self.currentTime = currentTime + self.timeOffset
         delegate?.playerEngine(self, updatedCurrentTime: currentTime)
+        emit(.currentTimeUpdated(currentTime))
     }
 
     public func streamer(_ streamer: Streaming, updatedDuration duration: TimeInterval) {
         hasDuration = duration
         delegate?.playerEngine(self, updatedDuration: self.duration)
+        emit(.durationUpdated(self.duration))
     }
 
     public func streamer(_ streamer: Streaming, willProvideFormat format: AVAudioFormat?) {
@@ -833,16 +894,19 @@ extension SomePlayerEngine: StreamingDelegate {
 
     public func streamerFailedToStartEngine(_ streamer: Streaming) {
         delegate?.playerEngine(self, failedWithException: .engineStart)
+        emit(.failure(.engineStart))
         self.state = .failed
     }
 
     public func streamerFailedToScheduleBuffer(_ streamer: Streaming) {
         delegate?.playerEngine(self, failedWithException: .scheduleBuffer)
+        emit(.failure(.scheduleBuffer))
         self.state = .failed
     }
 
     public func streamerFailedToCreateParser(_ streamer: Streaming) {
         delegate?.playerEngine(self, failedWithException: .createParser)
+        emit(.failure(.createParser))
         self.state = .failed
     }
 

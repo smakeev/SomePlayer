@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 /// The `Streaming` protocol provides an interface for defining the behavior we expect of an `AVAudioEngine`-based streamer. In this protocol we assume we're pulling the audio data from a remote URL on the internet, but could modify it to support loading audio data from any arbitrary source. We use the `downloader` property to describe a concrete class we expect to download the audio's binary data. Then we use the `parser` property to describe a concrete class we expect to parse the audio's binary data into audio packets in the audio's native format (could be compressed like MP3, AAC, etc). We finally use the `reader` property to describe a concrete class we expect to provide LPCM audio packets to the `playerEngineNode` to schedule for playback in the `engine`. The `reader` pulls audio data from the parser's packets and converts it into the target LPCM format. In addition, in this protocol we provide playback related properties such as `currentTime`, `duration`, and `state` as well as a `delegate` adhering to the `StreamingDelegate` to provide a caller updates when properties change. 
-public protocol Streaming: class {
+public protocol Streaming: AnyObject {
 
     // MARK: - Properties
 
