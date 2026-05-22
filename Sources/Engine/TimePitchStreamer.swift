@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 /// The `TimePitchStreamer` demonstrates how to subclass the `Streamer` and add a time/pitch shift effect.
-public class TimePitchStreamer: Streamer {
+public class TimePitchStreamer: Streamer, @unchecked Sendable {
 
     /// An `AVAudioUnitTimePitch` used to perform the time/pitch shift effect
     public let timePitchNode  = AVAudioUnitTimePitch()

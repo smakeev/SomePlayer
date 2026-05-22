@@ -10,7 +10,12 @@ import AVFoundation
 import os.log
 
 /// The `Parser` is a concrete implementation of the `Parsing` protocol used to convert binary data into audio packet data. This class uses the Audio File Stream Services to progressively parse the properties and packets of the incoming audio data.
-public class Parser: Parsing {
+///
+/// `@unchecked Sendable`: all access is serialised by the audio pipeline's
+/// executor; the C callbacks (`ParserPropertyChangeCallback`,
+/// `ParserPacketCallback`) fire synchronously inside `parse(data:)` which
+/// itself is only ever called from that executor.
+public class Parser: Parsing, @unchecked Sendable {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser")
     static let loggerPacketCallback = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser.Packets")
     static let loggerPropertyListenerCallback = OSLog(subsystem: "com.fastlearner.streamer", category: "Parser.PropertyListener")
@@ -25,10 +30,13 @@ public class Parser: Parsing {
 
     public internal(set) var dataFormat: AVAudioFormat? {
         didSet {
-            //inform delegate
-            DispatchQueue.main.async {
-                self.formatObserver?(self.dataFormat)
-            }
+            // The parser only mutates from the audio pipeline (downloader
+            // consumer Task → parse(data:) → C callback). Calling the
+            // observer directly stays in that serial domain instead of
+            // bouncing through main, which would race with subsequent
+            // callbacks. Consumers needing main-thread delivery hop on
+            // their own side.
+            formatObserver?(dataFormat)
         }
     }
     public internal(set) var packets = [(Data, AudioStreamPacketDescription?)]()

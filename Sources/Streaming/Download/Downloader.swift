@@ -10,9 +10,17 @@ import os.log
 
 /// The `Downloader` is a concrete implementation of the `Downloading` protocol
 /// using `URLSession` as the backing HTTP/HTTPS implementation.
-public class Downloader: NSObject, Downloading {
+///
+/// `@unchecked Sendable`: state is mutated from URLSession's delegate queue
+/// (a serial background queue) and read from the consuming `for await`
+/// loop on the audio executor. There is no concurrent write path; the
+/// AsyncStream serialises delivery to consumers.
+public class Downloader: NSObject, Downloading, @unchecked Sendable {
 
     override init() {
+        let (stream, continuation) = AsyncStream<DownloadEvent>.makeStream()
+        self.events = stream
+        self.eventsContinuation = continuation
         super.init()
         session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
     }
@@ -48,13 +56,15 @@ public class Downloader: NSObject, Downloading {
 
     // MARK: - Properties (Downloading)
 
-    weak public var delegate: DownloadingDelegate?
+    public let events: AsyncStream<DownloadEvent>
+    internal let eventsContinuation: AsyncStream<DownloadEvent>.Continuation
+
     public var completionHandler: ((Error?) -> Void)?
     public var progressHandler: ((Data, Float) -> Void)?
     public var progress: Float = 0
     public var state: DownloadingState = .notStarted {
         didSet {
-            delegate?.download(self, changedState: state)
+            eventsContinuation.yield(.stateChanged(state))
         }
     }
     public var url: URL? {
@@ -82,11 +92,13 @@ public class Downloader: NSObject, Downloading {
         }
     }
 
+    deinit {
+        eventsContinuation.finish()
+    }
+
     // MARK: - Methods
 
     public func start() {
-//        //os_log("%@ - %d [%@]", log: Downloader.logger, type: .debug, #function, #line, String(describing: url))
-
         guard let task = task else {
             return
         }
@@ -114,9 +126,6 @@ public class Downloader: NSObject, Downloading {
         var request = URLRequest(url: url)
         var headers = request.allHTTPHeaderFields ?? [:]
         headers["Range"] = "bytes=\(bytesHave)-"
-        //        if !resumableData.validator.isEmpty {
-        //            headers["If-Range"] = resumableData.validator
-        //        }
         request.allHTTPHeaderFields = headers
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         task = session!.dataTask(with: request)
@@ -124,8 +133,6 @@ public class Downloader: NSObject, Downloading {
     }
 
     public func pause() {
-//        //os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
-
         guard let task = task else {
             return
         }
@@ -139,7 +146,6 @@ public class Downloader: NSObject, Downloading {
     }
 
     public func stop() {
-//        //os_log("%@ - %d", log: Downloader.logger, type: .debug, #function, #line)
         totalBytesReceived = 0
         state = .stopped
         guard let task = task else {

@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 
-public class ID3Parser: NSObject {
+public final class ID3Parser: NSObject, @unchecked Sendable {
 
     public static func isGoodForStream(_ url: URL, handler: @escaping (Bool, Bool) -> Void) {
         let parser = ID3Parser(url, quickTest: true)

@@ -8,12 +8,14 @@
 import Foundation
 
 /// The `Downloading` protocol represents a generic downloader that can be used for grabbing a fixed length audio file.
-public protocol Downloading: class {
+public protocol Downloading: AnyObject, Sendable {
 
     // MARK: - Properties
 
-    /// A receiver implementing the `DownloadingDelegate` to receive state change, completion, and progress events from the `Downloading` instance.
-    var delegate: DownloadingDelegate? { get set }
+    /// Async stream of download events. Single-iteration — only one consumer
+    /// per `Downloading` instance. Replaces the prior `DownloadingDelegate`
+    /// pattern; see `DownloadEvent`.
+    var events: AsyncStream<DownloadEvent> { get }
 
     /// A completion block for when the contents of the download are fully downloaded.
     var completionHandler: ((Error?) -> Void)? { get set }

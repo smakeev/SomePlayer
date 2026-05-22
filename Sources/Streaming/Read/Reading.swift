@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 /// The `Reading` protocol provides an interface for defining the behavior we expect of an audio data provider in the context of an engine (`AVAudioEngine`) or graph (`AUGraph`).
-public protocol Reading {
+public protocol Reading: AnyObject, Sendable {
 
     var buffers: [[UnsafeMutableRawPointer]] { get }
     var bufferDescriptions: [[UnsafeMutablePointer<AudioStreamPacketDescription>]] {get}

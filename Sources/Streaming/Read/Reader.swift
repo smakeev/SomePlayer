@@ -11,7 +11,11 @@ import AVFoundation
 import os.log
 
 /// The `Reader` is a concrete implementation of the `Reading` protocol and is intended to provide the audio data provider for an `AVAudioEngine`. The `parser` property provides a `Parseable` that handles converting binary audio data into audio packets in whatever the original file's format was (MP3, AAC, WAV, etc). The reader handles converting the audio data coming from the parser to a LPCM format that can be used in the context of `AVAudioEngine` since the `AVAudioplayerEngineNode` requires we provide `AVAudioPCMBuffer` in the `scheduleBuffer` methods.
-public class Reader: Reading {
+///
+/// `@unchecked Sendable`: all mutating access is serialised by the audio
+/// pipeline's executor (Phase 2). The internal `queue.sync` in `read`/`seek`
+/// is kept as belt-and-suspenders for now.
+public class Reader: Reading, @unchecked Sendable {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Reader")
     static let loggerConverter = OSLog(subsystem: "com.fastlearner.streamer", category: "Reader.Converter")
 

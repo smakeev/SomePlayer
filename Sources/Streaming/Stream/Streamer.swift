@@ -10,8 +10,18 @@ import Foundation
 import os.log
 
 /// The `Streamer` is a concrete implementation of the `Streaming` protocol and is intended to provide a high-level, extendable class for streaming an audio file living at a URL on the internet. Subclasses can override the `attachNodes` and `connectNodes` methods to insert custom effects.
-open class Streamer: Streaming {
+///
+/// Marked `@unchecked Sendable` because access discipline (Phase 2+ of the
+/// threading refactor) guarantees all internal state is only ever touched
+/// from the `audioPipeline` actor's executor or from main-thread paths that
+/// will move there in subsequent phases. See THREADING_PLAN.md.
+open class Streamer: Streaming, @unchecked Sendable {
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Streamer")
+
+    /// Actor that hosts all audio-side long-running Tasks (scheduling tick,
+    /// volume ramp, future downloader consumer, etc.) on a dedicated serial
+    /// executor — replacing the previous `Timer`-on-main scheduling.
+    public let audioPipeline = AudioPipeline()
 
     // MARK: - Properties (Streaming)
 
@@ -33,11 +43,7 @@ open class Streamer: Streaming {
     public internal(set) var totalDuration:   TimeInterval = 0
     public internal(set) var totalTimeOffset: TimeInterval = 0
 
-    public lazy var downloader: Downloading = {
-        let downloader = Downloader()
-        downloader.delegate = self
-        return downloader
-    }()
+    public lazy var downloader: Downloading = Downloader()
     public internal(set) var parser: Parsing?
     public internal(set) var reader: Reading?
     public let engine = AVAudioEngine()
@@ -76,8 +82,6 @@ open class Streamer: Streaming {
             engine.mainMixerNode.outputVolume = newValue
         }
     }
-    var scheduleNextBufferTimer:   Timer?
-    var volumeRampTimer:           Timer?
     var volumeRampTargetValue:     Float?
     var succededInProgressiveSeek: Bool = false
     var progressiveInPlay:         Bool = false
@@ -157,25 +161,37 @@ open class Streamer: Streaming {
         // Prepare the engine
         engine.prepare()
 
-        /// Use timer to schedule the buffers (this is not ideal, wish AVAudioEngine provided a pull-model for scheduling buffers)
-        let interval = (1 / (readFormat.sampleRate / Double(readBufferSize))) / 100
-        scheduleNextBufferTimer = Timer(timeInterval: interval / 2, repeats: true) {
-            [weak self] _ in
-            guard let validSelf = self else {
-                return
+        // Drive buffer scheduling + time-update ticks from a Task pinned to
+        // the audio pipeline's serial executor (off the main thread).
+        // Cadence is ~100 Hz; the previous Timer ran ~1 kHz on main and
+        // starved UI work.
+        let pipeline = audioPipeline
+        Task { [weak self] in
+            await pipeline.startScheduling(interval: .milliseconds(10)) { [weak self] in
+                guard let streamer = self else { return false }
+                if streamer.state != .stopped {
+                    if !streamer.isLocal && streamer.progressiveSeek == 0 {
+                        streamer.scheduleNextBuffer()
+                    }
+                    streamer.handleTimeUpdate()
+                    streamer.notifyTimeUpdated()
+                }
+                return true
             }
-            guard self?.state != .stopped else {
-                return
-            }
-
-            if self?.isLocal != true && validSelf.progressiveSeek == 0 {
-                self?.scheduleNextBuffer()
-            }
-            self?.handleTimeUpdate()
-            self?.notifyTimeUpdated()
         }
-        if let timer = scheduleNextBufferTimer {
-            RunLoop.current.add(timer, forMode: .common)
+
+        // Consume the downloader's event stream on the audio executor.
+        // Replaces the prior delegate-based delivery, which forced every
+        // chunk through the main thread.
+        let downloaderRef = downloader
+        Task { [weak self] in
+            await pipeline.run(.downloadConsumer) { [weak self] in
+                for await event in downloaderRef.events {
+                    if Task.isCancelled { return }
+                    guard let streamer = self else { return }
+                    streamer.handleDownloadEvent(event)
+                }
+            }
         }
     }
 
@@ -191,8 +207,13 @@ open class Streamer: Streaming {
 
     // MARK: - Reset
 
-    deinit{
-        scheduleNextBufferTimer?.invalidate()
+    deinit {
+        // Fire-and-forget cancellation of any in-flight audio Tasks.
+        // The pipeline is captured strongly so it outlives the deinit
+        // long enough for the cancellation to propagate; once tasks see
+        // `Task.isCancelled`, they exit and the pipeline is released.
+        let pipeline = audioPipeline
+        Task { await pipeline.cancelAll() }
     }
 
     func reset() {
@@ -387,21 +408,34 @@ open class Streamer: Streaming {
 
     func swellVolume(to newVolume: Float, duration: TimeInterval = 0.5) {
         volumeRampTargetValue = newVolume
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(duration*1000/2))) { [weak self] in
-            guard let validSelf = self else { return }
-            validSelf.volumeRampTimer?.invalidate()
-            let timer = Timer(timeInterval: Double(Float((duration/2.0))/(newVolume * 10)), repeats: true) { [weak self] timer in
-                guard let validSelf = self else { return }
-                if validSelf.volume != newVolume {
-                    validSelf.volume = min(newVolume, validSelf.volume + 0.1)
-                } else {
-                    validSelf.volumeRampTimer = nil
-                    validSelf.volumeRampTargetValue = nil
-                    timer.invalidate()
+        // The incremental ramp only steps up; for a zero/negative target,
+        // hard-snap to avoid both an infinite loop and the divide-by-zero
+        // in the step interval computation (audit #11).
+        guard newVolume > 0 else {
+            volume = max(0, newVolume)
+            volumeRampTargetValue = nil
+            return
+        }
+        let pipeline = audioPipeline
+        let halfDurationNanos = UInt64((duration / 2.0) * 1_000_000_000)
+        // Ramp ~10 steps of 0.1 to reach `newVolume`; spread evenly across
+        // the remaining half of `duration`.
+        let stepNanos = max(UInt64(1_000_000),
+                            UInt64((Double(duration) / 2.0 / Double(newVolume * 10)) * 1_000_000_000))
+        Task {
+            await pipeline.run(.volumeRamp) { [weak self] in
+                try? await Task.sleep(nanoseconds: halfDurationNanos)
+                while !Task.isCancelled {
+                    guard let streamer = self else { return }
+                    if streamer.volume != newVolume {
+                        streamer.volume = min(newVolume, streamer.volume + 0.1)
+                        try? await Task.sleep(nanoseconds: stepNanos)
+                    } else {
+                        streamer.volumeRampTargetValue = nil
+                        return
+                    }
                 }
             }
-            RunLoop.current.add(timer, forMode: .common)
-            validSelf.volumeRampTimer = timer
         }
     }
 
@@ -495,11 +529,19 @@ open class Streamer: Streaming {
             isBuffering = false
             isFileSchedulingComplete = false
             lastSteppedPacket += 1
-            playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self] in
-                guard let validSelf = self else { return }
-                DispatchQueue.main.async {
-                    validSelf.lastSteppedPacket -= 1
-                    reader.freeBuffer()
+            // scheduleBuffer's completion fires on an internal AVAudio thread
+            // (not the real-time render thread). Hop back onto the audio
+            // pipeline so `lastSteppedPacket` and `reader.freeBuffer()` run
+            // in the same serial domain as `read(...)` — closes the
+            // cross-thread mutation of `Reader.buffers` (audit #5).
+            let pipeline = audioPipeline
+            playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self, reader] in
+                Task {
+                    await pipeline.perform { [weak self] in
+                        guard let streamer = self else { return }
+                        streamer.lastSteppedPacket -= 1
+                        reader.freeBuffer()
+                    }
                 }
             }
         } catch ReaderError.reachedEndOfFile {

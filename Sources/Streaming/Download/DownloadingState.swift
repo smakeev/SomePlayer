@@ -14,7 +14,7 @@ import Foundation
 /// - paused: The download is paused
 /// - notStarted: The download has not started yet
 /// - stopped: The download has been stopped/cancelled
-public enum DownloadingState: String {
+public enum DownloadingState: String, Sendable {
     case completed
     case completedWithError
     case started
