@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 @preconcurrency import AVFoundation
 
 #if canImport(UIKit)
@@ -16,6 +17,7 @@ import AppKit
 public typealias SomePlayerImage = NSImage
 #endif
 
+@MainActor
 public protocol SomeplayerEngineDelegate: AnyObject {
     func playerEngine(_ playerEngine: SomePlayerEngine, updatedDownloadProgress progress: Float, currentTaskProgress currentProgress: Float, forURL url: URL)
     func playerEngine(_ playerEngine: SomePlayerEngine, changedState state: SomePlayerEngine.PlayerEngineState)
@@ -77,14 +79,62 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
     }
 
+    // MARK: - Command queue (Phase 3)
+
+    /// Lock-protected cache of most-recently-set scalar values so sync
+    /// getters reflect the latest setter call even though the actual AVAudio
+    /// mutation runs asynchronously on the audio executor.
+    struct EngineSnapshot: Sendable {
+        var rate: Float?
+        var volume: Float?
+        var pitch: Float?
+        var globalGain: Float?
+        var baseRate: Float?
+        // Power-level readouts from the audio tap. Public read via getters.
+        var averagePowerForChannel0: Float?
+        var averagePowerForChannel1: Float?
+        // Latest tap buffer snapshot (replaces the racey `lastBuffer` property).
+        var lastBufferSnapshot: AudioBufferSnapshot?
+    }
+    private let stateSnapshot = OSAllocatedUnfairLock<EngineSnapshot>(initialState: EngineSnapshot())
+
+    /// Fire-and-forget command enqueue. A new command of the same `kind`
+    /// cancels any in-flight task with that key. Work runs on the audio
+    /// pipeline's serial executor, so all bodies see a single thread.
+    private func enqueue(_ kind: AudioPipeline.TaskKey, _ work: @escaping @Sendable () -> Void) {
+        let pipeline = streamer.audioPipeline
+        Task(priority: .userInitiated) {
+            await pipeline.run(kind) {
+                work()
+            }
+        }
+    }
+
+    /// Convenience for the "cancel pending commands, then enqueue" pattern
+    /// used by `openRemote`/`openLocal`/`reset`. Internal long-running
+    /// loops (scheduling/downloader-consumer/volume-ramp) are preserved —
+    /// only public command tasks are cancelled.
+    private func enqueueExclusive(_ kind: AudioPipeline.TaskKey, _ work: @escaping @Sendable () -> Void) {
+        let pipeline = streamer.audioPipeline
+        Task(priority: .userInitiated) {
+            await pipeline.cancelPublicCommands()
+            await pipeline.run(kind) {
+                work()
+            }
+        }
+    }
+
     public internal(set) var downloadingPolicy: PlayerEngineDownloadingPolicy
 
     public var volume: Float {
         get {
-            return streamer.volume
+            stateSnapshot.withLock { $0.volume } ?? streamer.volume
         }
         set {
-            streamer.volume = newValue
+            stateSnapshot.withLock { $0.volume = newValue }
+            enqueue(.setVolume) { [weak self] in
+                self?.streamer.volume = newValue
+            }
         }
     }
 
@@ -98,11 +148,17 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     public var silenceHandlingType: SilenceHandlingType = .none {
         didSet {
             guard oldValue != silenceHandlingType else { return }
-            silenceRateController.reset()
-            if oldValue == .none {
-                self.rate = self.baseRate
-            } else {
-                applySmartRate(self.rate, maxRate: max(self.rate, self.baseRate))
+            let wasNone = (oldValue == .none)
+            let base = self.baseRate
+            let currentRate = self.rate
+            enqueue(.setSilenceHandling) { [weak self] in
+                guard let self = self else { return }
+                self.silenceRateController.reset()
+                if wasNone {
+                    self.setRateDirect(base)
+                } else {
+                    self.applySmartRate(currentRate, maxRate: max(currentRate, base))
+                }
             }
         }
     }
@@ -130,19 +186,8 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
     public internal(set) var isGoodForStream: Bool = false {
         didSet {
-            for observer in isGoodForStreamObservers.values {
-                observer(isGoodForStream)
-            }
             emit(.isGoodForStreamChanged(isGoodForStream))
         }
-    }
-    fileprivate var isGoodForStreamObservers: [String : (Bool)->Void] = [String : (Bool)->Void]()
-    public func addIsGoodForStreamObservers(withId id: String, observer: @escaping (Bool)->Void) {
-        isGoodForStreamObservers[id] = observer
-    }
-
-    public func removeIsGoodForStreamObservers(withId id: String) {
-        isGoodForStreamObservers[id] = nil
     }
 
     public fileprivate(set) var state: PlayerEngineState = .undefined {
@@ -298,13 +343,20 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     public fileprivate(set) var resumableData: ResumableData?
 
     public func resume() {
+        enqueue(.resume) { [weak self] in
+            self?.resumeDirect()
+        }
+    }
+
+    /// Direct body of `resume`. Called from the audio executor — either as
+    /// the enqueued task, or from another already-executor-side command
+    /// (e.g., `restart`).
+    private func resumeDirect() {
         guard !fileDownloaded else { return }
         if self.downloadingPolicy == .progressiveDownload {
             if let resumableData {
-                print("[SomePlayerDebug][Engine] resume progressive using resumable offset=\(resumableData.offset) readyData=\(resumableData.readyData)")
                 streamer.resume(resumableData)
             } else {
-                print("[SomePlayerDebug][Engine] resume progressive from original url")
                 hasBytes = 0
                 streamer.url = self.url
             }
@@ -535,69 +587,99 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     }
 
     public func openRemote(_ url: URL) {
-        resetPlaybackStateForOpening(isLocal: false, clearMetadata: true)
-        handleMeta(url) {
-            self.url = url
+        enqueueExclusive(.open) { [weak self] in
+            guard let self = self else { return }
+            self.resetPlaybackStateForOpening(isLocal: false, clearMetadata: true)
+            self.handleMeta(url) { [weak self] in
+                self?.url = url
+            }
         }
     }
 
     public func openLocal(_  url: URL) {
-        resetPlaybackStateForOpening(isLocal: true, clearMetadata: true)
-        fileDownloaded = true
-        handleMeta(url) {
-            self.url = url
+        enqueueExclusive(.open) { [weak self] in
+            guard let self = self else { return }
+            self.resetPlaybackStateForOpening(isLocal: true, clearMetadata: true)
+            self.fileDownloaded = true
+            self.handleMeta(url) { [weak self] in
+                self?.url = url
+            }
         }
     }
 
     /// Resets playback state and reloads the current item without replacing the player instance.
     public func reset() {
-        guard let url else {
-            resetPlaybackStateForOpening(isLocal: isLocal, clearMetadata: true)
-            state = .undefined
-            return
-        }
-
-        let shouldOpenLocal = isLocal
-        resetPlaybackStateForOpening(isLocal: shouldOpenLocal, clearMetadata: true)
-        if shouldOpenLocal {
-            fileDownloaded = true
-        }
-        handleMeta(url) {
-            self.url = url
+        let currentURL = self.url
+        let wasLocal = self.isLocal
+        enqueueExclusive(.reset) { [weak self] in
+            guard let self = self else { return }
+            guard let url = currentURL else {
+                self.resetPlaybackStateForOpening(isLocal: wasLocal, clearMetadata: true)
+                self.state = .undefined
+                return
+            }
+            self.resetPlaybackStateForOpening(isLocal: wasLocal, clearMetadata: true)
+            if wasLocal {
+                self.fileDownloaded = true
+            }
+            self.handleMeta(url) { [weak self] in
+                self?.url = url
+            }
         }
     }
 
     public func pause() {
-        streamer.pause()
+        enqueue(.pause) { [weak self] in
+            self?.streamer.pause()
+        }
     }
 
     public func play() {
-        if hasError {
-            resume()
+        enqueue(.play) { [weak self] in
+            guard let self = self else { return }
+            if self.hasError {
+                self.resumeDirect()
+            }
+            self.streamer.play()
         }
-        streamer.play()
     }
 
     public func seek(to time: TimeInterval) {
-        do{
-            silenceRateController.reset()
-            self.rate = self.baseRate
-            try streamer.seek(to: time)
+        enqueue(.seek) { [weak self] in
+            self?.seekDirect(to: time)
         }
-        catch {
+    }
+
+    /// Direct seek body; runs on the audio executor. Called by the enqueued
+    /// `.seek` task and by `seekPercentlyDirect` when it computes a target time.
+    private func seekDirect(to time: TimeInterval) {
+        silenceRateController.reset()
+        stateSnapshot.withLock { $0.rate = self.baseRate }
+        streamer.rate = self.baseRate
+        do {
+            try streamer.seek(to: time)
+        } catch {
             delegateEmitter.enqueueEdge(.seekFailed(error))
             emit(.seekFailed(error))
         }
     }
 
     public func seekPercently(to percent: Float) {
+        enqueue(.seek) { [weak self] in
+            self?.seekPercentlyDirect(to: percent)
+        }
+    }
+
+    /// Direct seekPercently body; runs on the audio executor.
+    private func seekPercentlyDirect(to percent: Float) {
         silenceRateController.reset()
-        self.rate = self.baseRate
+        stateSnapshot.withLock { $0.rate = self.baseRate }
+        streamer.rate = self.baseRate
         guard percent >= 0.0 && percent <= 1.0 else { return }
         if fileDownloaded {
             offset = 0
             let intervalToSeek = hasDuration * TimeInterval(percent)
-            seek(to: intervalToSeek)
+            seekDirect(to: intervalToSeek)
             return
         }
 
@@ -615,30 +697,35 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
                 streamer.waitForProgress = 0
                 streamer.progressiveInPlay = false
                 if self.state == .playing {
-                    self.pause()
-                    self.play()
+                    streamer.pause()
+                    streamer.play()
                 }
             }
             let percentWide = percentWeAre - percentOffset
-            //let timeToSeek = (TimeInterval(percent) * hasDuration) / TimeInterval(percentWide)
             let hasWide = percent - percentOffset
             let realPercent = hasWide / percentWide
             let timeToSeek = TimeInterval(realPercent) * hasDuration
-            seek(to: timeToSeek)
+            seekDirect(to: timeToSeek)
             return
         }
 
         if percent == 1 && downloadingPolicy != .progressiveDownload {
             offset = headerSize
             resumableData = nil
-            try! self.streamer.seek(to: 0, internalUse: true)
-            self.streamer.stop()
+            // Audit #15: replace `try!` with proper error routing.
+            do {
+                try streamer.seek(to: 0, internalUse: true)
+            } catch {
+                delegateEmitter.enqueueEdge(.seekFailed(error))
+                emit(.seekFailed(error))
+            }
+            streamer.stop()
             self.state = .ended
             return
         }
 
         if !rangeHeader && downloadingPolicy == .stream {
-            seek(to: hasDuration)
+            seekDirect(to: hasDuration)
             return
         }
 
@@ -653,72 +740,84 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         } else if downloadingPolicy == .stream {
             offset = Int64(Float(totalSize) * percent) + headerSize
             resumableData = ResumableData(offset: offset)
-            print("[SomePlayerDebug][Engine] seekPercently range restart offset=\(offset) percent=\(percent) totalSizeWithoutHeader=\(totalSize) headerSize=\(headerSize)")
             streamer.progressiveSeek = 0
             streamer.waitForProgress = 0
             streamer.progressiveInPlay = false
-            restart()
+            // Already on the audio executor — inline the restart body
+            // instead of re-enqueueing.
+            let stateBefore = streamer.state
+            streamer.reset()
+            resumeDirect()
+            if stateBefore == .playing {
+                streamer.play()
+            }
         } else if downloadingPolicy == .predownload {
-            seek(to: 0) //we should not be here. Make sure seek is available only on .ready state.
+            seekDirect(to: 0)
         }
     }
 
     public func restart() {
-        let stateBefore = streamer.state
-        streamer.reset()
-        resume()
-        if stateBefore == .playing {
-            play()
+        enqueue(.restart) { [weak self] in
+            guard let self = self else { return }
+            let stateBefore = self.streamer.state
+            self.streamer.reset()
+            self.resumeDirect()
+            if stateBefore == .playing {
+                self.streamer.play()
+            }
         }
     }
 
     public var globalGain: Float {
         get {
-            return streamer.globalGain
+            stateSnapshot.withLock { $0.globalGain } ?? streamer.globalGain
         }
 
         set {
-            silenceRateController.reset()
-            self.rate = self.baseRate
-            streamer.globalGain = newValue
+            stateSnapshot.withLock { $0.globalGain = newValue }
+            // globalGain implicitly resets silence handling and rate.
+            let base = stateSnapshot.withLock { $0.baseRate ?? baseRate }
+            stateSnapshot.withLock { $0.rate = base }
+            emit(.rateChanged(base))
+            enqueue(.setGlobalGain) { [weak self] in
+                guard let self = self else { return }
+                self.silenceRateController.reset()
+                self.streamer.rate = base
+                self.streamer.globalGain = newValue
+            }
         }
     }
 
     public var pitch: Float {
         get {
-            return streamer.pitch
+            stateSnapshot.withLock { $0.pitch } ?? streamer.pitch
         }
         set {
-            streamer.pitch = newValue
+            stateSnapshot.withLock { $0.pitch = newValue }
+            enqueue(.setPitch) { [weak self] in
+                self?.streamer.pitch = newValue
+            }
         }
     }
 
     public var baseRate: Float = 1.0 {
         didSet {
+            stateSnapshot.withLock { $0.baseRate = baseRate }
             self.rate = baseRate
         }
     }
 
     public internal(set) var rate: Float {
         get {
-            return streamer.rate
+            stateSnapshot.withLock { $0.rate } ?? streamer.rate
         }
         set {
-            streamer.rate = newValue
-            for observer in rateObservers.values {
-                observer(newValue)
-            }
+            stateSnapshot.withLock { $0.rate = newValue }
             emit(.rateChanged(newValue))
+            enqueue(.setRate) { [weak self] in
+                self?.streamer.rate = newValue
+            }
         }
-    }
-
-    fileprivate var rateObservers: [String : (Float)->Void] = [String : (Float)->Void]()
-    public func addRateObserver(withId id: String, observer: @escaping (Float)->Void) {
-        rateObservers[id] = observer
-    }
-
-    public func removeRateObserver(withId id: String) {
-        rateObservers[id] = nil
     }
 
     private let smartRateMaxBoost: Float = 0.75
@@ -727,7 +826,20 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     private let smartRateSnapThreshold: Float = 0.001
     private var silenceRateController = SilenceRateController()
 
-    private func applySmartRate(
+    /// Direct rate mutation called from within audio-executor work bodies
+    /// (e.g., `applySmartRate`, `handleSilenceDirect`). Skips the public
+    /// `rate` setter's enqueue hop and updates snapshot + emit
+    /// + streamer.rate inline on the current thread.
+    fileprivate func setRateDirect(_ newValue: Float) {
+        stateSnapshot.withLock { $0.rate = newValue }
+        emit(.rateChanged(newValue))
+        streamer.rate = newValue
+    }
+
+    /// Computes the next smart-rate step and writes it via `setRateDirect`.
+    /// Must run on the audio executor — touches `silenceRateController`
+    /// state and `streamer.rate`.
+    fileprivate func applySmartRate(
         _ targetRate: Float,
         maxRate: Float? = nil,
         maxStep: Float? = nil,
@@ -741,10 +853,14 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         let smoothedRate = currentRate + (boundedTarget - currentRate) * rateSmoothing
         let delta = min(max(smoothedRate - currentRate, -rateMaxStep), rateMaxStep)
         let nextRate = currentRate + delta
-        rate = abs(boundedTarget - nextRate) <= smartRateSnapThreshold ? boundedTarget : nextRate
+        let resolved = abs(boundedTarget - nextRate) <= smartRateSnapThreshold ? boundedTarget : nextRate
+        setRateDirect(resolved)
     }
 
-    private func handleSilence(loudness: Float? = nil, frameLength: AVAudioFrameCount? = nil) {
+    /// Silence-handling body. Renamed from `handleSilence` to make it
+    /// explicit that it must run on the audio executor (called from the
+    /// `.tapPower` task and the `.setSilenceHandling` task).
+    fileprivate func handleSilenceDirect(loudness: Float? = nil, frameLength: AVAudioFrameCount? = nil) {
 
         func informForsavedTime() {
             if let validSampleRate = self.sampleRate {
@@ -789,10 +905,24 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
     }
 
-    public fileprivate(set) var averagePowerForChannel0: Float? = nil
-    public fileprivate(set) var averagePowerForChannel1: Float? = nil
+    /// Latest RMS power for channel 0 (decibels), captured by the main-mixer
+    /// tap. Lock-protected snapshot — safe to read from any thread.
+    public var averagePowerForChannel0: Float? {
+        stateSnapshot.withLock { $0.averagePowerForChannel0 }
+    }
 
-    public fileprivate(set) var lastBuffer: AVAudioPCMBuffer?
+    /// Latest RMS power for channel 1 (decibels), captured by the main-mixer
+    /// tap. Lock-protected snapshot — safe to read from any thread.
+    public var averagePowerForChannel1: Float? {
+        stateSnapshot.withLock { $0.averagePowerForChannel1 }
+    }
+
+    /// Sendable copy of the latest tap buffer. Replaces the prior racey
+    /// `lastBuffer: AVAudioPCMBuffer?` (audit #7).
+    public var lastBufferSnapshot: AudioBufferSnapshot? {
+        stateSnapshot.withLock { $0.lastBufferSnapshot }
+    }
+
     public fileprivate(set) var isBuffering: Bool = false
 
     //is only valid in case of progressiveDownloading mode.
@@ -819,10 +949,13 @@ extension SomePlayerEngine: StreamingDelegate {
     }
 
     private func handlePowerLevels(_ powerLevels: SilencePowerLevels?) {
-        DispatchQueue.main.async {
-            self.averagePowerForChannel0 = powerLevels?.channel0
-            self.averagePowerForChannel1 = powerLevels?.channel1
-            self.handleSilence(loudness: powerLevels?.combined, frameLength: powerLevels?.frameLength)
+        // Silence-rate processing touches `silenceRateController` and the
+        // rate setter chain — must run on the audio executor.
+        enqueue(.tapPower) { [weak self] in
+            self?.handleSilenceDirect(
+                loudness: powerLevels?.combined,
+                frameLength: powerLevels?.frameLength
+            )
         }
     }
 
@@ -878,11 +1011,21 @@ extension SomePlayerEngine: StreamingDelegate {
             //print(format)
 
             mainMixer.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, when in
-                self.lastBuffer = buffer
-                if let snapshot = AudioBufferSnapshot(from: buffer, sampleTime: when.sampleTime) {
+                let snapshot = AudioBufferSnapshot(from: buffer, sampleTime: when.sampleTime)
+                let powerLevels = SilenceAudioAnalyzer.powerLevels(from: buffer)
+
+                // Snapshot writes are lock-protected — safe inline from the
+                // tap thread. AsyncStream yield is also thread-safe.
+                self.stateSnapshot.withLock {
+                    $0.lastBufferSnapshot = snapshot
+                    $0.averagePowerForChannel0 = powerLevels?.channel0
+                    $0.averagePowerForChannel1 = powerLevels?.channel1
+                }
+                if let snapshot = snapshot {
                     self.emit(.audioBufferTap(snapshot))
                 }
-                self.handlePowerLevels(SilenceAudioAnalyzer.powerLevels(from: buffer))
+                // Silence/rate state lives on the audio executor.
+                self.handlePowerLevels(powerLevels)
             }
 
         } else {

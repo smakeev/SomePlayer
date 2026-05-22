@@ -43,6 +43,10 @@ class ViewController: UIViewController {
             speedUpLabel.text = formatted
         }
     }
+
+    /// Holds the full-rate engine event subscription. Cancelled in deinit.
+    private var eventSubscription: Task<Void, Never>?
+
     // Streamer props
     lazy var playerEngine: SomePlayerEngine = {
         let playerEngine = SomePlayerEngine(.progressiveDownload)
@@ -108,9 +112,22 @@ class ViewController: UIViewController {
         }
         playerEngine.openRemote(url)
 
-        playerEngine.addRateObserver(withId: "controller") { value in
-            self.smartSpeedLabel.text = String(format: "%.2fx", value)
-            self.adaptiveSpeedLabel?.text = String(format: "%.2fx", value)
+        // Full-rate event stream. Hops to MainActor for UI updates because
+        // the stream delivers on the audio executor. Throttled main-thread
+        // delivery would also work via the delegate, but for per-rate
+        // display we want every change without coalescing.
+        eventSubscription?.cancel()
+        let events = playerEngine.subscribe()
+        eventSubscription = Task { [weak self] in
+            for await event in events {
+                if Task.isCancelled { return }
+                if case .rateChanged(let value) = event {
+                    await MainActor.run {
+                        self?.smartSpeedLabel.text = String(format: "%.2fx", value)
+                        self?.adaptiveSpeedLabel?.text = String(format: "%.2fx", value)
+                    }
+                }
+            }
         }
         smartSpeedBtn.action = { [unowned self] btn in
             if self.playerEngine.silenceHandlingType == .smart {

@@ -8,7 +8,7 @@
 import AVFoundation
 import Foundation
 
-struct SilencePowerLevels {
+struct SilencePowerLevels: Sendable {
     let combined: Float
     let channel0: Float?
     let channel1: Float?

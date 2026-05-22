@@ -33,16 +33,26 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     //     1. We've reached the end of the packet data and the file has been completely parsed
     //     2. We've reached the end of the data we currently have downloaded, but not the file
     //
+    // (Fixed off-by-one: previous `>= packets.count - 1` left the last
+    // packet unread and could mis-handle edge transitions.)
     let packetIndex = Int(reader.currentPacket)
     let packets = reader.parser.packets
-    let isEndOfData = packetIndex >= packets.count - 1
-    if isEndOfData {
+    if packetIndex >= packets.count {
         if reader.parser.isParsingComplete {
             packetCount.pointee = 0
             return ReaderReachedEndOfDataError
         } else {
             return ReaderNotEnoughDataError
         }
+    }
+
+    // Defensive guards: the read() body just appended an empty entry to
+    // both arrays before this callback fired, so count should be >= 1.
+    // If it's not (a race surfaces, or a reset removed entries between
+    // converter iterations), bail out cleanly instead of crashing on a
+    // negative subscript.
+    guard reader.buffers.count > 0, reader.bufferDescriptions.count > 0 else {
+        return ReaderNotEnoughDataError
     }
 
     //
@@ -53,9 +63,8 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     let dataCount = data.count
     ioData.pointee.mNumberBuffers = 1
 
-
-
-      reader.buffers[reader.buffers.count - 1].append(UnsafeMutableRawPointer.allocate(byteCount: dataCount, alignment: 0))
+    let bufferSlot = reader.buffers.count - 1
+    reader.buffers[bufferSlot].append(UnsafeMutableRawPointer.allocate(byteCount: dataCount, alignment: 0))
     data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) in
         ioData.pointee.mBuffers.mData = UnsafeMutableRawPointer(bytes)
         memcpy((reader.buffers.last?.last?.assumingMemoryBound(to: UInt8.self))!, bytes, dataCount)
@@ -70,7 +79,8 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     let sourceFormatDescription = sourceFormat.streamDescription.pointee
     if sourceFormatDescription.mFormatID != kAudioFormatLinearPCM {
         if outPacketDescriptions?.pointee == nil {
-            reader.bufferDescriptions[reader.bufferDescriptions.count - 1].append(UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(capacity: 1))
+            let descSlot = reader.bufferDescriptions.count - 1
+            reader.bufferDescriptions[descSlot].append(UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(capacity: 1))
             outPacketDescriptions?.pointee = reader.bufferDescriptions.last?.last
         }
         outPacketDescriptions?.pointee?.pointee.mDataByteSize = UInt32(dataCount)
@@ -80,5 +90,5 @@ func ReaderConverterCallback(_ converter: AudioConverterRef,
     packetCount.pointee = 1
     reader.currentPacket = reader.currentPacket + 1
 
-    return noErr;
+    return noErr
 }

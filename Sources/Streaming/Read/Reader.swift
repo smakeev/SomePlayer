@@ -22,18 +22,22 @@ public class Reader: Reading, @unchecked Sendable {
     // MARK: - Reading props
     public internal(set) var buffers = [[UnsafeMutableRawPointer]]()
     public internal(set) var bufferDescriptions = [[UnsafeMutablePointer<AudioStreamPacketDescription>]]()
+
+    /// Frees the oldest scheduled buffer's backing memory. Now wrapped in
+    /// the same `queue.sync` that protects `read`/`seek` so the converter
+    /// callback can't observe a partial mutation (audit #5 closed).
     public func freeBuffer() {
-        guard buffers.count > 0 else { return }
-        for item in buffers[0] {
-            item.deallocate()
+        queue.sync {
+            guard buffers.count > 0 else { return }
+            for item in buffers[0] {
+                item.deallocate()
+            }
+            for item in bufferDescriptions[0] {
+                item.deallocate()
+            }
+            buffers.remove(at: 0)
+            bufferDescriptions.remove(at: 0)
         }
-
-        for item in bufferDescriptions[0] {
-            item.deallocate()
-        }
-
-        buffers.remove(at: 0)
-        bufferDescriptions.remove(at: 0)
     }
 
     internal func removeAllBuffers() {
@@ -98,7 +102,10 @@ public class Reader: Reading, @unchecked Sendable {
 
         // Try to read the frames from the parser
         try queue.sync {
-            let context = unsafeBitCast(self, to: UnsafeMutableRawPointer.self)
+            // Audit #36: use Unmanaged for the opaque pointer round-trip
+            // instead of `unsafeBitCast`; clearer refcount semantics and
+            // robust against ARC reorderings the compiler might apply.
+            let context = Unmanaged.passUnretained(self).toOpaque()
             self.buffers.append([UnsafeMutableRawPointer]())
             self.bufferDescriptions.append([UnsafeMutablePointer<AudioStreamPacketDescription>]())
             let status = AudioConverterFillComplexBuffer(converter!, ReaderConverterCallback, context, &packets, buffer.mutableAudioBufferList, nil)

@@ -16,12 +16,35 @@ import Foundation
 
 public actor AudioPipeline {
 
-    /// Identifies long-running tasks owned by the pipeline so we can cancel
-    /// and replace them one-at-a-time per kind.
+    /// Identifies tasks owned by the pipeline so we can cancel and replace
+    /// them one-at-a-time per kind. Internal kinds drive long-running loops
+    /// (scheduling, downloader consumer); command kinds back the fire-and-
+    /// forget public engine API — a new command of the same kind cancels
+    /// any in-flight task with that key (audit-driven per-kind coalescing).
     public enum TaskKey: Hashable, Sendable {
+        // Internal long-running loops
         case scheduling
         case volumeRamp
         case downloadConsumer
+
+        // Public engine commands
+        case play
+        case pause
+        case stop
+        case seek
+        case resume
+        case restart
+        case open
+        case reset
+        case setRate
+        case setVolume
+        case setPitch
+        case setGlobalGain
+        case setBaseRate
+        case setSilenceHandling
+
+        // Internal events that originate off-executor and need to land on it
+        case tapPower
     }
 
     private let executor: AudioExecutor
@@ -52,6 +75,18 @@ public actor AudioPipeline {
     public func cancelAll() {
         for task in tasks.values { task.cancel() }
         tasks.removeAll()
+    }
+
+    /// Cancels in-flight public command tasks but preserves the internal
+    /// long-running loops (scheduling tick, downloader consumer, volume
+    /// ramp). Used by `openRemote`/`openLocal`/`reset` to drop pending
+    /// commands without taking down the playback pipeline itself.
+    public func cancelPublicCommands() {
+        let internalKinds: Set<TaskKey> = [.scheduling, .downloadConsumer, .volumeRamp]
+        for (key, task) in tasks where !internalKinds.contains(key) {
+            task.cancel()
+            tasks[key] = nil
+        }
     }
 
     /// One-shot hop onto the audio executor. Use for fire-and-forget

@@ -89,6 +89,21 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     private var player = SomePlayer()
     private var isDraggingSlider = false
 
+    /// Use this for any consumer that needs every engine event in order, on
+    /// the audio executor's cadence, without going through the throttled
+    /// MainActor delegate. Common cases: analytics, debug logging, custom
+    /// derived state. The stream finishes automatically when the engine
+    /// deallocates. For typical UI binding (state, time, progress) prefer
+    /// the `@MainActor` delegate — it's coalesced to ~10 Hz.
+    ///
+    /// Example:
+    ///   Task {
+    ///       for await event in engine.subscribe() {
+    ///           print("[Engine event]", event)
+    ///       }
+    ///   }
+    private var eventSubscription: Task<Void, Never>?
+
     private static let emptyTimeline = SomePlaybackTimelineState(
         currentTime: 0,
         duration: 0,
@@ -108,7 +123,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     deinit {
-        player.removeRateObserver(withId: "swiftui-example")
+        eventSubscription?.cancel()
         player.delegate = nil
     }
 
@@ -211,7 +226,8 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         guard policy != player.downloadingPolicy else { return }
         let oldPlayer = player
         oldPlayer.pause()
-        oldPlayer.removeRateObserver(withId: "swiftui-example")
+        eventSubscription?.cancel()
+        eventSubscription = nil
         oldPlayer.delegate = nil
 
         resetPlaybackUI(clearSilenceMode: false)
@@ -300,11 +316,22 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         player.pitch = pitch
         player.globalGain = voiceBoost ? 10 : 0
         player.silenceHandlingType = selectedMode
-        player.addRateObserver(withId: "swiftui-example") { [weak self] rate in
-            Task { @MainActor in
-                self?.appliedRate = rate
+
+        // Subscribe to the full-rate event stream and hop to MainActor for
+        // SwiftUI-bound state. The throttled @MainActor delegate also fires
+        // for most of these; this stream is the right place to observe
+        // events without coalescing (here we only react to `rateChanged`).
+        eventSubscription?.cancel()
+        let events = player.subscribe()
+        eventSubscription = Task { [weak self] in
+            for await event in events {
+                if Task.isCancelled { return }
+                if case .rateChanged(let rate) = event {
+                    await MainActor.run { self?.appliedRate = rate }
+                }
             }
         }
+
         player.openRemote(streamURL)
     }
 
