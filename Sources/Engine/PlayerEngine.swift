@@ -720,8 +720,14 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     public internal(set) var isInitialized: Bool = false
 
     private func resetPlaybackStateForOpening(isLocal: Bool, clearMetadata: Bool) {
-        let oldDelegate = delegate
-        delegate = nil
+        // The mutations below enqueue into the throttled DelegateEmitter
+        // and the AsyncStream subscribers — both lock-protected and
+        // already coalescing latest-wins for scalar fields. Old code
+        // nil'd `delegate` here to "suppress" mid-reset notifications,
+        // but the emitter delivers on its own tick and reads `delegate`
+        // at flush time, so the trick suppressed nothing. With
+        // replay-on-delegate-set it actively hurts: restoring delegate
+        // would replay mid-reset state. Just let the coalescing handle it.
         offset = 0
         needsAsset = true
         insiderInfoDuration = 0
@@ -750,7 +756,6 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
             album = nil
             image = nil
         }
-        self.delegate = oldDelegate
     }
 
     public func openRemote(_ url: URL) {
