@@ -11,12 +11,14 @@ import os.log
 
 class ParserTests: XCTestCase {
 
+    let downloader = Downloader()
+
     func testParseDownloadedMP3() {
         let expectation = XCTestExpectation(description: "Download & Parse MP3")
 
         let url = RemoteFileURL.theLastOnes.mp3
-        Downloader.shared.url = url
-        Downloader.shared.start()
+        downloader.url = url
+        downloader.start()
 
         var parserOrNil: Parser?
         do {
@@ -31,12 +33,12 @@ class ParserTests: XCTestCase {
             return
         }
 
-        Downloader.shared.progressHandler = { (data, progress) in
+        downloader.progressHandler = { (data, progress) in
             try! parser.parse(data: data)
         }
 
-        Downloader.shared.completionHandler = {
-            XCTAssertEqual(Downloader.shared.state, .completed)
+        downloader.completionHandler = { [downloader] in
+            XCTAssertEqual(downloader.state, .completed)
             XCTAssertNil($0)
 
             XCTAssertNotEqual(parser.dataFormat, nil)
@@ -44,7 +46,7 @@ class ParserTests: XCTestCase {
 
             expectation.fulfill()
         }
-        XCTAssertEqual(Downloader.shared.state, .started)
+        XCTAssertEqual(downloader.state, .started)
 
         self.wait(for: [expectation], timeout: 10)
     }
@@ -53,8 +55,8 @@ class ParserTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Download & Parse AAC")
 
         let url = RemoteFileURL.theLastOnes.aac
-        Downloader.shared.url = url
-        Downloader.shared.start()
+        downloader.url = url
+        downloader.start()
 
         var parserOrNil: Parser?
         do {
@@ -69,12 +71,12 @@ class ParserTests: XCTestCase {
             return
         }
 
-        Downloader.shared.progressHandler = { (data, progress) in
+        downloader.progressHandler = { (data, progress) in
             try! parser.parse(data: data)
         }
 
-        Downloader.shared.completionHandler = {
-            XCTAssertEqual(Downloader.shared.state, .completed)
+        downloader.completionHandler = { [downloader] in
+            XCTAssertEqual(downloader.state, .completed)
             XCTAssertNil($0)
 
             XCTAssertNotEqual(parser.dataFormat, nil)
@@ -82,7 +84,7 @@ class ParserTests: XCTestCase {
 
             expectation.fulfill()
         }
-        XCTAssertEqual(Downloader.shared.state, .started)
+        XCTAssertEqual(downloader.state, .started)
 
         self.wait(for: [expectation], timeout: 10)
     }
@@ -91,8 +93,8 @@ class ParserTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Download & Parse WAV")
 
         let url = RemoteFileURL.theLastOnes.wav
-        Downloader.shared.url = url
-        Downloader.shared.start()
+        downloader.url = url
+        downloader.start()
 
         var parserOrNil: Parser?
         do {
@@ -107,12 +109,12 @@ class ParserTests: XCTestCase {
             return
         }
 
-        Downloader.shared.progressHandler = { (data, progress) in
+        downloader.progressHandler = { (data, progress) in
             try! parser.parse(data: data)
         }
 
-        Downloader.shared.completionHandler = {
-            XCTAssertEqual(Downloader.shared.state, .completed)
+        downloader.completionHandler = { [downloader] in
+            XCTAssertEqual(downloader.state, .completed)
             XCTAssertNil($0)
 
             XCTAssertNotEqual(parser.dataFormat, nil)
@@ -120,7 +122,7 @@ class ParserTests: XCTestCase {
 
             expectation.fulfill()
         }
-        XCTAssertEqual(Downloader.shared.state, .started)
+        XCTAssertEqual(downloader.state, .started)
 
         self.wait(for: [expectation], timeout: 30)
     }

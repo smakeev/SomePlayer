@@ -231,23 +231,41 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 	public var timelineState: SomePlaybackTimelineState {
 		let maximumValue: Float
 		let sliderValue: Float
+		let pendingProgressiveSeek = downloadingPolicy == .progressiveDownload
+			&& !fileDownloaded
+			&& streamer.waitForProgress > 0
+			&& streamer.progressiveSeek > 0
+		let timelineCurrentTime = pendingProgressiveSeek ? streamer.progressiveSeek + timeOffset : currentTime
 
 		if fileDownloaded {
 			if rangeHeader {
 				maximumValue = Float(totalSize)
 				if hasDuration > 0 {
-					sliderValue = Float(currentTime / hasDuration) * Float(totalSize)
+					sliderValue = Float(timelineCurrentTime / hasDuration) * Float(totalSize)
 				} else {
 					sliderValue = 0
 				}
 			} else {
 				maximumValue = Float(duration)
-				sliderValue = Float(currentTime)
+				sliderValue = Float(timelineCurrentTime)
+			}
+		} else if pendingProgressiveSeek {
+			if rangeHeader {
+				maximumValue = Float(totalSize)
+				if duration > 0 {
+					let targetPercent = Float((timelineCurrentTime - timeOffset) / duration)
+					sliderValue = Float(totalSize) * targetPercent
+				} else {
+					sliderValue = Float(offset)
+				}
+			} else {
+				maximumValue = Float(hasDuration)
+				sliderValue = Float(timelineCurrentTime - timeOffset)
 			}
 		} else if rangeHeader {
 			maximumValue = Float(totalSize)
 			if hasDuration > 0 {
-				let currentPercentOfDownloadedData = Float((currentTime - timeOffset) / hasDuration)
+				let currentPercentOfDownloadedData = Float((timelineCurrentTime - timeOffset) / hasDuration)
 				let currentByte = Float(hasBytes) * currentPercentOfDownloadedData
 				sliderValue = Float(offset) + currentByte
 			} else {
@@ -255,7 +273,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 			}
 		} else {
 			maximumValue = Float(hasDuration)
-			sliderValue = Float(currentTime - timeOffset)
+			sliderValue = Float(timelineCurrentTime - timeOffset)
 		}
 
 		let offsetProgress: Float
@@ -266,9 +284,9 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 		}
 
 		return SomePlaybackTimelineState(
-			currentTime: currentTime,
+			currentTime: timelineCurrentTime,
 			duration: duration,
-			currentTimeText: formattedCurrentTime,
+			currentTimeText: SomePlaybackTimeFormatter.string(from: timelineCurrentTime),
 			durationText: formattedDuration,
 			sliderValue: sliderValue,
 			sliderMaximumValue: maximumValue,
@@ -279,11 +297,16 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
     public internal(set) var hasDuration:       TimeInterval = 0 {
         didSet {
-
+            if oldValue == 0 && hasDuration > 0 {
+                recomputeBitrate()
+            }
         }
     }
     public internal(set) var estimatedDuration: TimeInterval = 0 {
         didSet {
+            if oldValue == 0 && estimatedDuration > 0 {
+                recomputeBitrate()
+            }
             delegateEmitter.enqueueDuration(self.duration)
             emit(.durationUpdated(self.duration))
         }
@@ -306,8 +329,17 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     }
     public internal(set) var totalSize:      Int64 = 0 {
         didSet {
-            self.aboutBitrate = (Double(self.totalSize - self.headerSize) * 8) / self.duration
+            recomputeBitrate()
         }
+    }
+
+    /// Computes `aboutBitrate` from `totalSize` and `duration` only when both
+    /// inputs are valid. Avoids the NaN/inf that arose from `/ duration` while
+    /// duration was still 0, and the per-chunk recomputation churn.
+    private func recomputeBitrate() {
+        let payload = totalSize - headerSize
+        guard payload > 0, duration > 0 else { return }
+        aboutBitrate = (Double(payload) * 8) / duration
     }
     public internal(set) var headerSize:     Int64 = 0
     public internal(set) var hasBytes:       Int64 = 0 {

@@ -82,6 +82,12 @@ open class Streamer: Streaming, @unchecked Sendable {
     var volumeRampTargetValue:     Float?
     var succededInProgressiveSeek: Bool = false
     var progressiveInPlay:         Bool = false
+
+    /// One-shot latch for `fileFinished`. Without it, `handleTimeUpdate`
+    /// re-fires the delegate on every tick after the end condition is met,
+    /// since `seek(to: 0)` + `pause()` don't immediately move `currentTime`
+    /// back below `duration`. Cleared by a successful seek or reset.
+    private var didFireFileFinished: Bool = false
     // MARK: - Properties
 
     var waitForProgress: Float = 0 {
@@ -218,6 +224,7 @@ open class Streamer: Streaming, @unchecked Sendable {
         duration = nil
         reader = nil
         isFileSchedulingComplete = false
+        didFireFileFinished = false
 
         // Create a new parser
         do {
@@ -317,6 +324,7 @@ open class Streamer: Streaming, @unchecked Sendable {
     var currentPosition: AVAudioFramePosition = 0
     private func seekLocal(to time: TimeInterval) {
         guard let audioFile = audioFile else { return }
+        didFireFileFinished = false
         let isPlaying = playerEngineNode.isPlaying
         let lastVolume = volumeRampTargetValue ?? volume
         seekFrame = AVAudioFramePosition(Float(time) * audioSampleRate)
@@ -358,6 +366,7 @@ open class Streamer: Streaming, @unchecked Sendable {
         guard let parser = parser, let reader = reader else {
             return
         }
+        didFireFileFinished = false
 
         // Get the proper time and packet offset for the seek operation
         guard let frameOffset = parser.frameOffset(forTime: time),
@@ -582,9 +591,10 @@ open class Streamer: Streaming, @unchecked Sendable {
         guard let duration = self.duration else { return }
 
         if currentTime + totalTimeOffset >= max(duration, totalDuration) {
+            guard !didFireFileFinished else { return }
+            didFireFileFinished = true
             try? seek(to: 0)
             pause()
-            //inform that file finished
             if let url = self.url {
                 self.delegate?.streamer(self, fileFinished: url)
             }

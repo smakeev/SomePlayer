@@ -27,12 +27,6 @@ public class Downloader: NSObject, Downloading, @unchecked Sendable {
 
     static let logger = OSLog(subsystem: "com.fastlearner.streamer", category: "Downloader")
 
-    // MARK: - Singleton
-
-    /// A shared instance for clients that want to reuse one downloader (and
-    /// the shared URL cache) across multiple requests.
-    nonisolated(unsafe) public static var shared: Downloader = Downloader()
-
     // MARK: - Properties
 
     /// A `Bool` indicating whether the session should use the shared URL cache or not. Really useful for testing, but in production environments you probably always want this to `true`. Default is true.
