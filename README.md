@@ -49,7 +49,7 @@ final class PlayerModel: ObservableObject {
         player.silenceHandlingType = .adaptiveSpeed
 
         let events = player.subscribe()
-        eventTask = Task { [weak self] in
+        eventTask = Task.detached { [weak self] in
             for await event in events {
                 await self?.handle(event)
             }
@@ -84,6 +84,14 @@ final class PlayerModel: ObservableObject {
 ```
 
 On iOS, configure `AVAudioSession` for playback before starting audio.
+
+### Observation: delegate vs. `subscribe()`
+
+For typical UI binding (state, current time, duration, download progress, metadata, buffering), prefer `SomeplayerEngineDelegate`. The engine's `DelegateEmitter` already throttles delivery on `@MainActor` (~10 Hz) and coalesces scalar fields to the latest value per tick, so you can drive SwiftUI directly from delegate callbacks without further work.
+
+`subscribe()` returns the full-rate, unthrottled event stream. It emits as fast as the audio executor produces events and includes high-frequency cases (`audioBufferTap`, `currentTimeUpdated`, `downloadProgressUpdated`, `rateChanged` while silence-skipping is active). Use it for analytics, debug logging, custom derived state, or to observe events the delegate doesn't surface — not as a general UI binding.
+
+When you do consume `subscribe()`, prefer a detached task (as in the example above) so the loop runs off the main thread and only the actual UI mutation pays the MainActor hop. If the consuming task inherits `MainActor` isolation, every event — even ones you ignore — wakes the main thread. If you must update UI from `subscribe()` and the event is not rare, throttle the updates yourself (and reconsider whether the delegate covers your case — it usually does).
 
 ## Examples
 
@@ -260,69 +268,38 @@ Formats `TimeInterval` values as `mm:ss` or `hh:mm:ss`:
 let text = SomePlaybackTimeFormatter.string(from: 65) // "01:05"
 ```
 
+## Silence Skipping And Saved Time
+
+`SomePlayerEngine` can transparently speed up quiet sections of audio while keeping pitch stable through `AVAudioUnitTimePitch`. Select a mode with `player.silenceHandlingType`:
+
+- `.none` — leaves playback at `baseRate`.
+- `.smart` — keeps a rolling window of recent loudness, uses the upper percentile as a speech/loudness reference, and gently raises rate when the current buffer is quieter than that reference. Capped at `baseRate + 0.75`, with small per-tap steps. Good general-purpose default.
+- `.speedUp` — threshold-and-hysteresis silence detection. Targets a fixed `2.5x` while silent and `baseRate` while speech is detected. Attack engages quickly; release is more gradual.
+- `.adaptiveSpeed` — builds a rolling loudness model with quiet/speech reference percentiles, maps current loudness into a curved silence score (with a dead zone and a minimum dynamic range so low-contrast content stays stable), and applies a proportional rate boost. Capped at `baseRate + 0.55`, with conservative smoothing.
+
+Seeking and playback state changes reset the silence controller; the effective rate returns to `baseRate`. The currently applied rate is exposed via `player.rate` and emitted as `PlayerEvent.rateChanged(_:)` (which can fire frequently while silence-skipping is active).
+
+When silence skipping runs above `baseRate`, the engine estimates how much real time was saved on each audio-tap buffer and emits it through:
+
+- `SomeplayerEngineDelegate.playerEngine(_:savedSeconds:)`
+- `PlayerEvent.savedSecondsUpdated(_:)`
+
+Each delivery is a per-buffer delta — accumulate the values for a session total. See `Docs/SilenceSkipping.md` for the full algorithm description and `Docs/Architecture.md` / `Docs/StreamingPipeline.md` for the surrounding engine design.
+
 ## Lower-Level Public API
 
-Most apps should use `SomePlayer`. The following types are public because the engine is built from composable streaming pieces and the tests/examples use them directly.
+The engine is composed from smaller streaming pieces, each exposed publicly so the test suite can drive layers in isolation and so advanced integrations can swap or wrap individual stages. Typical apps don't need them — use `SomePlayer` instead.
 
-### `TimePitchStreamer`
+- `TimePitchStreamer` — `Streamer` plus the rate/pitch and global-gain audio nodes. Use to drive the time-pitch audio graph without the engine's higher-level layers.
+- `Streamer` / `Streaming` / `StreamingDelegate` / `StreamingState` — the AVAudioEngine-backed scheduling pipeline. Use to schedule playback without the engine's state machine, metadata, or `PlayerEvent` stream.
+- `Downloader` / `Downloading` / `DownloadingState` / `DownloadEvent` — `URLSession`-based byte fetcher with range-header support. Use to consume the byte stream outside the engine, e.g. for prefetching into your own cache.
+- `Parser` / `Parsing` / `ParserError` — Audio File Stream Services parser producing native audio packets and format/duration info. Use when you have a byte source and want packets without playing them.
+- `Reader` / `Reading` / `ReaderError` — packet-to-LPCM `AVAudioPCMBuffer` converter. Use to obtain PCM buffers for analysis, transcoding, or non-engine output.
+- `AudioPipeline` / `AudioExecutor` — actor + custom serial executor that owns the audio-side work queue. Use to serialize your own audio-side work onto the same executor the engine uses.
+- `ID3Parser` — stream and asset metadata extraction (`isGoodForStream(_:handler:)`, title/artist/album/artwork/duration). Use to probe a URL or extract metadata without standing up a full engine.
+- `ResumableData` — byte offset, ready-data count, and HTTP validator info for resuming range-capable downloads. Use when bridging the downloader to your own resume/seek logic.
 
-`TimePitchStreamer` subclasses `Streamer` and adds:
-
-- `timePitchNode`: `AVAudioUnitTimePitch` used for rate and pitch.
-- `voiceBoostNode`: `AVAudioUnitEQ` used for global gain.
-- `pitch`: pitch in cents.
-- `rate`: playback rate.
-- `globalGain`: EQ gain in `-96...24` dB.
-
-### `Streamer` And `Streaming`
-
-`Streamer` is the AVAudioEngine-backed streaming implementation. The `Streaming` protocol exposes:
-
-- State: `currentTime`, `duration`, `state`, `url`, `delegate`.
-- Pipeline pieces: `downloader`, `parser`, `reader`.
-- Audio graph: `engine`, `playerEngineNode`, `readBufferSize`, `readFormat`, `volume`.
-- Commands: `play()`, `pause()`, `stop()`, `resume(_:)`, `seek(to:internalUse:)`.
-
-`StreamingState` values are `.stopped`, `.paused`, and `.playing`.
-
-`StreamingDelegate` receives streamer-level file completion, range header, download progress/failure, state, time, duration, format, buffering, downloader-wait, and engine failure callbacks. `SomePlayerEngine` implements this delegate and translates those callbacks into the app-facing delegate and event stream.
-
-### `Downloader`, `Downloading`, And `DownloadEvent`
-
-`Downloader` implements `Downloading` with `URLSession`. The protocol exposes `events`, `completionHandler`, `progress`, `state`, `url`, `simulatedChunkDelayMilliseconds`, and the commands `start()`, `pause()`, `stop()`, and `resume(_:)`.
-
-`DownloadingState` values are `.completed`, `.completedWithError`, `.started`, `.paused`, `.notStarted`, and `.stopped`.
-
-`DownloadEvent` values are:
-
-- `.stateChanged`
-- `.rangeHeader`
-- `.data`
-- `.completed`
-
-### `Parser`, `Parsing`, And `ParserError`
-
-`Parser` implements `Parsing` with Audio File Stream Services. The protocol exposes parsed `dataFormat`, estimated `duration`, completion state, parsed `packets`, `totalFrameCount`, `totalPacketCount`, `formatObserver`, `parse(data:)`, and offset helpers for time/frame/packet conversion.
-
-`ParserError` values are `.streamCouldNotOpen` and `.failedToParseBytes`.
-
-### `Reader`, `Reading`, And `ReaderError`
-
-`Reader` implements `Reading` and converts parsed packets into LPCM `AVAudioPCMBuffer` instances for the engine. The protocol exposes buffer storage, `currentPacket`, `parser`, `readFormat`, `read(_:)`, `seek(_:)`, and `freeBuffer()`.
-
-`ReaderError` values cover converter failures, destination format creation, PCM buffer creation, missing parser format, insufficient data, end of file, and queue locking.
-
-### `AudioPipeline` And `AudioExecutor`
-
-`AudioPipeline` is an actor isolated to `AudioExecutor`, a custom serial executor. It owns keyed tasks for public commands and long-running scheduling work. Public methods include `run`, `cancel`, `cancelAll`, `cancelPublicCommands`, `perform`, and `startScheduling`.
-
-### `ID3Parser`
-
-`ID3Parser` extracts stream metadata and asset/header information. `ID3Parser.isGoodForStream(_:handler:)` checks whether a URL has stream-friendly metadata, and engine opens use parser instances internally to populate title, artist, album, artwork, duration, and header size.
-
-### `ResumableData`
-
-`ResumableData` stores byte offset, ready-data count, and HTTP validator information used when resuming a range-capable download.
+See `Docs/LowLevelAPI.md` for the per-type member lists, intended use cases, and stability notes.
 
 ## Layout
 

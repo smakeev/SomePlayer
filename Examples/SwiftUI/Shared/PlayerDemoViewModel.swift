@@ -333,9 +333,15 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         // stream covers the user-pref settings that aren't part of the
         // delegate API, so the UI binds them back to engine state — for
         // example, after `player.reset()`.
+        //
+        // Detached on purpose: subscribe() is unthrottled and includes
+        // high-rate events (audioBufferTap, currentTimeUpdated, ...). If
+        // this task inherited MainActor, every event — even ones we ignore
+        // — would wake the main thread. Detached keeps the loop off-main
+        // and pays the MainActor hop only for events we actually apply.
         eventSubscription?.cancel()
         let events = player.subscribe()
-        eventSubscription = Task { [weak self] in
+        eventSubscription = Task.detached { [weak self] in
             for await event in events {
                 if Task.isCancelled { return }
                 await MainActor.run { self?.applyEvent(event) }
