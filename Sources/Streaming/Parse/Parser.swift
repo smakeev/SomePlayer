@@ -66,7 +66,7 @@ public class Parser: Parsing, @unchecked Sendable {
     /// - Throws: A `ParserError.streamCouldNotOpen` meaning a file stream instance could not be opened
     public init() throws {
         //print("!!! Parser INIT")
-        let context = unsafeBitCast(self, to: UnsafeMutableRawPointer.self)
+        let context = Unmanaged.passUnretained(self).toOpaque()
         guard AudioFileStreamOpen(context, ParserPropertyChangeCallback, ParserPacketCallback, kAudioFileMP3Type, &streamID) == noErr else {
             throw ParserError.streamCouldNotOpen
         }

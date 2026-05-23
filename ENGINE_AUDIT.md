@@ -39,16 +39,3 @@ Tags: `[THREAD]` concurrency/race, `[BUG]` correctness, `[LIFETIME]` retain/leak
 ### #35 [DESIGN] `reset()` doesn't reset `silenceHandlingType` or other public settings
 `PlayerEngine.swift:reset()` — only resets playback state. Possibly intentional (user-tuned settings persist across track changes), but worth confirming.
 
----
-
-## Parser.swift
-
-### #36 [STYLE] `unsafeBitCast(self, to: UnsafeMutableRawPointer.self)`
-`Parser.swift:69` — should use `Unmanaged.passUnretained(self).toOpaque()` for clarity and correct refcount semantics. Same fix as already applied in `Reader.swift`.
-
----
-
-## Parser+PropertyListener.swift
-
-### #PL47 [STYLE] Generic `&value` inout to `UnsafeMutableRawPointer`
-`Parser+PropertyListener.swift:47` — `AudioFileStreamGetProperty(..., &value)` with generic `T` triggers a strict-concurrency warning (`forming UnsafeMutableRawPointer to a variable of type 'T'`). The lone remaining warning under `-warnings-as-errors`. Fix by specialising the helper or by using `withUnsafeMutablePointer`.

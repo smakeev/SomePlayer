@@ -44,9 +44,12 @@ func GetPropertyValue<T>(_ value: inout T, _ streamID: AudioFileStreamID, _ prop
         return
     }
 
-    guard AudioFileStreamGetProperty(streamID, propertyID, &propSize, &value) == noErr else {
-        //os_log("Failed to get value [%@]", log: Parser.loggerPropertyListenerCallback, type: .error, String(describing: propertyID))
-        return
+    // Forming `&value` directly on a generic `T` trips strict-concurrency
+    // ("forming UnsafeMutableRawPointer to a variable of type 'T'"). The
+    // explicit `withUnsafeMutablePointer` scope makes the lifetime/aliasing
+    // bound to this call and silences the warning.
+    _ = withUnsafeMutablePointer(to: &value) { ptr in
+        AudioFileStreamGetProperty(streamID, propertyID, &propSize, ptr)
     }
 }
 
