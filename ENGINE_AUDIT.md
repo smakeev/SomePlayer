@@ -6,16 +6,6 @@ Tags: `[THREAD]` concurrency/race, `[BUG]` correctness, `[LIFETIME]` retain/leak
 
 ---
 
-## Streamer.swift
-
-### #12 [DESIGN] `scheduleBuffer` completion captures the old `reader` strongly
-`Streamer.swift` — the closure captures the local `reader` (from `guard let reader = reader`) rather than `self.reader`. If `reset()` swaps the reader, the completion still calls `freeBuffer()` on the *old* reader. This is correct (you want the old reader to free its own allocations), but worth pinning down explicitly: the old reader stays alive until all its scheduled buffers play through.
-
-### #16 [BUG] `progressiveSeek` mutated inside `waitForProgress` didSet
-`Streamer.swift` — setting `waitForProgress = 0` triggers `seek(to: progressiveSeek)` from inside the property setter and mutates `progressiveSeek` in a `defer`. Fragile state machine; reads of these properties from other paths are not synchronized with this transition. Worth refactoring into an explicit state-transition method.
-
----
-
 ## PlayerEngine.swift
 
 ### #25 [THREAD] `state` didSet runs `streamer.totalDuration = 0` on the setting thread

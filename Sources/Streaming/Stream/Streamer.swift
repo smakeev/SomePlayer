@@ -80,7 +80,6 @@ open class Streamer: Streaming, @unchecked Sendable {
         }
     }
     var volumeRampTargetValue:     Float?
-    var succededInProgressiveSeek: Bool = false
     var progressiveInPlay:         Bool = false
 
     /// One-shot latch for `fileFinished`. Without it, `handleTimeUpdate`
@@ -90,46 +89,16 @@ open class Streamer: Streaming, @unchecked Sendable {
     private var didFireFileFinished: Bool = false
     // MARK: - Properties
 
-    var waitForProgress: Float = 0 {
-        didSet {
-            guard progressive else { return }
-            isBuffering = false
-            if waitForProgress == 0 {
-                if progressiveSeek != 0 {
-                    do {
-                        defer {
-                            if succededInProgressiveSeek == true {
-                                progressiveSeek = 0
-                                if progressiveInPlay && !playerEngineNode.isPlaying {
-                                    playerEngineNode.play()
-                                    progressiveInPlay = false
-                                }
-                            }
-                            succededInProgressiveSeek = true
-                        }
-                        try seek(to: progressiveSeek)
-                        succededInProgressiveSeek = true
-                    }
-                    catch {
-                        succededInProgressiveSeek = false
-                    }
-                }
-            } else {
-                if progressiveInPlay == false && playerEngineNode.isPlaying {
-                    progressiveInPlay = true
-                    playerEngineNode.pause()
-                }
-            }
-        }
-    }
+    /// Download-progress threshold a pending progressive seek is waiting on.
+    /// Plain stored value: writes go through `beginProgressiveSeek` /
+    /// `cancelProgressiveSeek` / `tryCompleteProgressiveSeek`, not via a
+    /// property observer that does work.
+    var waitForProgress: Float = 0
     var progressive: Bool = false
-    var progressiveSeek: TimeInterval = 0 {
-        didSet {
-            if progressive == false {
-                progressiveSeek = 0
-            }
-        }
-    }
+    /// Target time for a pending progressive seek. Same write discipline as
+    /// `waitForProgress` — mutated only by the explicit state-transition
+    /// methods below.
+    var progressiveSeek: TimeInterval = 0
 
     /// A `TimeInterval` used to calculate the current play time relative to a seek operation.
     var currentTimeOffset: TimeInterval = 0
@@ -441,6 +410,58 @@ open class Streamer: Streaming, @unchecked Sendable {
         }
     }
 
+    // MARK: - Progressive seek state machine
+
+    /// Start a progressive-download seek: remember the target and the
+    /// download-progress threshold we need before we can perform the
+    /// underlying byte-range seek. Pauses the node so playback freezes at
+    /// the seek target, and records that we should auto-resume once the
+    /// threshold is reached.
+    func beginProgressiveSeek(to target: TimeInterval, waitFor progress: Float) {
+        guard progressive else { return }
+        isBuffering = false
+        progressiveSeek = target
+        waitForProgress = progress
+        if !progressiveInPlay && playerEngineNode.isPlaying {
+            progressiveInPlay = true
+            playerEngineNode.pause()
+        }
+    }
+
+    /// Abort a pending progressive seek without performing it. Called when
+    /// the engine decides the seek can be satisfied locally (already in the
+    /// downloaded window) or when a reset/open invalidates it.
+    func cancelProgressiveSeek() {
+        progressiveSeek = 0
+        waitForProgress = 0
+        progressiveInPlay = false
+    }
+
+    /// Driven by the download consumer on every progress notification.
+    /// Atomic: either the seek lands and we clear the pending state (and
+    /// resume play if we were playing pre-seek), or it throws and the
+    /// pending state is preserved so the next progress event retries.
+    func tryCompleteProgressiveSeek(currentProgress: Float) {
+        guard progressive, progressiveSeek != 0 else { return }
+        guard currentProgress >= waitForProgress else { return }
+        let target = progressiveSeek
+        let shouldResume = progressiveInPlay
+        do {
+            try seek(to: target)
+        } catch {
+            // Leave `progressiveSeek` non-zero so the next progress event
+            // retries. Matches the pre-refactor "retry on every event"
+            // behavior, just without the property-observer ping-pong.
+            return
+        }
+        progressiveSeek = 0
+        waitForProgress = 0
+        if shouldResume && !playerEngineNode.isPlaying {
+            playerEngineNode.play()
+            progressiveInPlay = false
+        }
+    }
+
     // MARK: - Scheduling Buffers
     //schedulefile for local file
 
@@ -535,6 +556,12 @@ open class Streamer: Streaming, @unchecked Sendable {
             // thread (not the real-time render thread). Hop back onto the
             // audio pipeline so `lastSteppedPacket` and `reader.freeBuffer`
             // run in the same serial domain as `read(_:)`.
+            //
+            // We capture the local `reader` (not `self.reader`) strongly on
+            // purpose: if `reset()` swaps in a new reader, in-flight buffers
+            // must still call `freeBuffer()` on the reader that allocated
+            // them. The old reader stays alive until every scheduled buffer
+            // has played through and released this closure.
             let pipeline = audioPipeline
             playerEngineNode.scheduleBuffer(nextScheduledBuffer) { [weak self, reader] in
                 Task {

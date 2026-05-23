@@ -732,9 +732,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
             //We are inside downloaded area
             if downloadingPolicy == .progressiveDownload {
-                streamer.progressiveSeek = 0
-                streamer.waitForProgress = 0
-                streamer.progressiveInPlay = false
+                streamer.cancelProgressiveSeek()
                 if self.state == .playing {
                     streamer.pause()
                     streamer.play()
@@ -769,8 +767,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
         if downloadingPolicy == .progressiveDownload {
             let targetTime = TimeInterval(percent) * duration
-            streamer.progressiveSeek = targetTime
-            streamer.waitForProgress = percent
+            streamer.beginProgressiveSeek(to: targetTime, waitFor: percent)
             if state == .paused {
                 delegateEmitter.enqueueTime(targetTime)
                 emit(.currentTimeUpdated(targetTime))
@@ -778,9 +775,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         } else if downloadingPolicy == .stream {
             offset = Int64(Float(totalSize) * percent) + headerSize
             resumableData = ResumableData(offset: offset)
-            streamer.progressiveSeek = 0
-            streamer.waitForProgress = 0
-            streamer.progressiveInPlay = false
+            streamer.cancelProgressiveSeek()
             // Already on the audio executor — inline the restart body
             // instead of re-enqueueing.
             let stateBefore = streamer.state

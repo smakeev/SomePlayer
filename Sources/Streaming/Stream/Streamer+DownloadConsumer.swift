@@ -33,8 +33,8 @@ extension Streamer {
     }
 
     private func handleDownloadData(_ data: Data, progress: Float) {
-        if progressive && progressiveSeek != 0 && waitForProgress <= progress {
-            waitForProgress = 0
+        if progressive {
+            tryCompleteProgressiveSeek(currentProgress: progress)
         }
         guard let parser = parser else { return }
 
