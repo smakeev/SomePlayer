@@ -8,12 +8,6 @@ Tags: `[THREAD]` concurrency/race, `[BUG]` correctness, `[LIFETIME]` retain/leak
 
 ## PlayerEngine.swift
 
-### #25 [THREAD] `state` didSet runs `streamer.totalDuration = 0` on the setting thread
-`PlayerEngine.swift` — the delegate emission is enqueued to the throttled `MainActor` emitter, but `if state == .initializing { streamer.totalDuration = 0 }` happens synchronously on whatever thread set state. Most callers are now on the audio executor (good), but a couple of paths (`handleMeta` completion via `DispatchQueue.main.async`, `format` didSet from the parser callback) can still set state from off-executor. Route `streamer.totalDuration = 0` through the audio pipeline.
-
-### #26 [THREAD] `handleMeta` mutates `self.id3Parser` from a global queue
-`PlayerEngine.swift:handleMeta` — `self.id3Parser?.cancel(); self.id3Parser = ID3Parser(url)` runs on `DispatchQueue.global()`. Commands are serialised now (open/reset use `enqueueExclusive`), so the racey window is narrower, but the `id3Parser` mutation itself is unprotected. Best fix: move ID3 parsing onto the audio pipeline (or its own actor) and have the completion call back through a non-isolated event the `.open` task awaits.
-
 ### #28 [BUG] `resetPlaybackStateForOpening` nils delegate then restores
 `PlayerEngine.swift:556-586` — pattern is `delegate = nil; ...mutations...; delegate = oldDelegate`. State mutations during this window enqueue notifications into the `DelegateEmitter` (lock-protected). The emitter's next tick will fire those — but they'll find `delegate` already restored, so suppression doesn't work for emitter-routed events either. Either drop the nil-trick (it doesn't help any more) or have the emitter snapshot the delegate at enqueue time and drop events whose snapshot is nil.
 

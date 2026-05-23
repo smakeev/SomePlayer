@@ -605,77 +605,116 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     }
 
     private var id3Parser: ID3Parser?
-    private func handleMeta(_ url: URL, handler: @escaping @Sendable ()-> Void) {
+
+    /// Plain-old data ferried from the ID3 parser's worker queue back to
+    /// the audio executor. Sendable; carries everything the executor needs
+    /// to apply the result without re-entering the parser's threads.
+    private struct ExtractedMeta: Sendable {
+        let hasAsset: Bool
+        let headerSize: Int64?
+        let title: String?
+        let artist: String?
+        let album: String?
+        let imageData: Data?
+        let assetDuration: TimeInterval?
+    }
+
+    /// Reads metadata fields from a possibly-blocking `AVAsset`. Intended
+    /// to run on the ID3 parser's worker queue (not the audio executor):
+    /// `availableMetadataFormats` / `metadata(forFormat:)` may block on
+    /// remote-asset I/O and must not stall scheduling. The returned
+    /// `ExtractedMeta` is fully Sendable and the only thing that crosses
+    /// back onto the executor.
+    private static func extractMeta(asset: AVAsset?, headerSize: Int64?) -> ExtractedMeta {
+        guard let asset else {
+            return ExtractedMeta(hasAsset: false, headerSize: headerSize, title: nil, artist: nil, album: nil, imageData: nil, assetDuration: nil)
+        }
+        var title: String?
+        var artist: String?
+        var album: String?
+        var imageData: Data?
+        for format in asset.availableMetadataFormats {
+            for item in asset.metadata(forFormat: format) {
+                guard let commonKey = item.commonKey?.rawValue else { continue }
+                switch commonKey {
+                case "title":
+                    title = item.value as? String
+                case "artist":
+                    artist = item.value as? String
+                case "albumName":
+                    album = item.value as? String
+                case "artwork":
+                    if let data = item.value as? Data {
+                        imageData = data
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        let duration = TimeInterval(CMTimeGetSeconds(asset.duration))
+        return ExtractedMeta(hasAsset: true, headerSize: headerSize, title: title, artist: artist, album: album, imageData: imageData, assetDuration: duration)
+    }
+
+    /// Caller must be running on the audio executor (the only place this
+    /// is invoked from is `enqueueExclusive(.open)` bodies). All id3Parser
+    /// ownership transitions happen here too, so the mutation is no longer
+    /// racy with a parallel openRemote/openLocal on `DispatchQueue.global`.
+    private func handleMeta(_ url: URL, handler: @escaping @Sendable () -> Void) {
         self.state = .initializing
         let assetNeeded = self.needsAsset
-        DispatchQueue.global().async {
-            if self.id3Parser != nil {
-                self.id3Parser?.cancel()
-            }
-            self.id3Parser = ID3Parser(url)
-            self.id3Parser?.needsAsset = assetNeeded
-            self.id3Parser?.parse { asset, headerSize in
 
-                if let asset = asset {
+        // Single-owner mutation on the audio executor.
+        self.id3Parser?.cancel()
+        let parser = ID3Parser(url)
+        parser.needsAsset = assetNeeded
+        self.id3Parser = parser
 
-                    DispatchQueue.main.async {
-                        if headerSize == nil {
-                            self.isGoodForStream = false
-                        } else {
-                            self.isGoodForStream = true //but bitrate could be variable
-                        }
-                        self.headerSize = headerSize ?? 0
-                    }
-                    let availableMetaFormats = asset.availableMetadataFormats
-                    for format in availableMetaFormats {
-                        for item in asset.metadata(forFormat: format) {
-                            if let commonKey = item.commonKey {
+        let pipeline = self.streamer.audioPipeline
+        let fallbackDuration = self.insiderInfoDuration
 
-                                if commonKey.rawValue == "title" {
-                                    DispatchQueue.main.async {
-                                        self.title = item.value as? String
-                                    }
-                                    continue
-                                }
-                                if commonKey.rawValue == "artist" {
-                                    DispatchQueue.main.async {
-                                        self.artist = item.value as? String
-                                    }
-                                    continue
-                                }
-                                if commonKey.rawValue == "albumName" {
-                                    DispatchQueue.main.async {
-                                        self.album = item.value as? String
-                                    }
-                                    continue
-                                }
-                                if commonKey.rawValue == "artwork" {
-                                    if let value = item.value {
-                                        if let data = value as? Data {
-                                            DispatchQueue.main.async {
-                                                self.image = SomePlayerImage(data: data)
-                                            }
-                                        }
-                                    }
-                                    continue
-                                }
-                            }
-                        }
-                    }
-                }
-                DispatchQueue.main.async {
-                    if let validAsset = asset {
-                        self.estimatedDuration = TimeInterval(CMTimeGetSeconds(validAsset.duration))
-                    } else {
-                        self.estimatedDuration = self.insiderInfoDuration
-                    }
-                    self.streamer.totalDuration = self.estimatedDuration
-
-                    self.isInitialized = true
+        parser.parse { [weak self] asset, headerSize in
+            // ID3Parser's handler fires from its internal global queue.
+            // Read metadata here (potentially blocking) then ferry a
+            // Sendable payload back onto the audio executor — that is
+            // the single thread that mutates engine state.
+            let extracted = SomePlayerEngine.extractMeta(asset: asset, headerSize: headerSize)
+            Task {
+                await pipeline.perform { [weak self] in
+                    guard let self else { return }
+                    self.applyExtractedMeta(extracted, fallbackDuration: fallbackDuration)
                     handler()
                 }
             }
         }
+    }
+
+    /// Runs on the audio executor. Applies the metadata payload extracted
+    /// off-executor; all the resulting property writes (which fan out to
+    /// emitters / streams) therefore originate from a single thread.
+    private func applyExtractedMeta(_ meta: ExtractedMeta, fallbackDuration: TimeInterval) {
+        if meta.hasAsset {
+            if let header = meta.headerSize {
+                isGoodForStream = true // but bitrate could be variable
+                headerSize = header
+            } else {
+                isGoodForStream = false
+                headerSize = 0
+            }
+        }
+        if let value = meta.title { title = value }
+        if let value = meta.artist { artist = value }
+        if let value = meta.album { album = value }
+        if let data = meta.imageData, let image = SomePlayerImage(data: data) {
+            self.image = image
+        }
+        if meta.hasAsset, let duration = meta.assetDuration {
+            estimatedDuration = duration
+        } else {
+            estimatedDuration = fallbackDuration
+        }
+        streamer.totalDuration = estimatedDuration
+        isInitialized = true
     }
 
     public internal(set) var isInitialized: Bool = false
