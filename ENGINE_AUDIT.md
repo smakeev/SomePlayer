@@ -26,6 +26,3 @@ Tags: `[THREAD]` concurrency/race, `[BUG]` correctness, `[LIFETIME]` retain/leak
 ### #34 [BUG] `seekPercently` percent==1 branch only handles `.stream`
 `PlayerEngine.swift:seekPercentlyDirect` — explicit `if percent == 1 && downloadingPolicy != .progressiveDownload` short-circuits to `.ended`. Predownload and progressive can fall through to other branches with surprising behavior.
 
-### #35 [DESIGN] `reset()` doesn't reset `silenceHandlingType` or other public settings
-`PlayerEngine.swift:reset()` — only resets playback state. Possibly intentional (user-tuned settings persist across track changes), but worth confirming.
-

@@ -53,6 +53,9 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     @Published private(set) var isWaitingForDownloader = false
     @Published private(set) var errorMessage: String?
 
+    // Guards against the user-pref @Published setters re-pushing to the
+    // engine when the assignment originated from an engine event (which
+    // would otherwise spin: setter → engine → event → setter).
     @Published var baseRate: Float = 1 {
         didSet {
             let steppedRate = (baseRate * 10).rounded() / 10
@@ -60,6 +63,7 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
                 baseRate = steppedRate
                 return
             }
+            guard steppedRate != player.baseRate else { return }
             player.baseRate = steppedRate
         }
     }
@@ -70,16 +74,20 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
                 pitch = steppedPitch
                 return
             }
+            guard steppedPitch != player.pitch else { return }
             player.pitch = steppedPitch
         }
     }
     @Published var voiceBoost = false {
         didSet {
-            player.globalGain = voiceBoost ? 10 : 0
+            let gain: Float = voiceBoost ? 10 : 0
+            guard gain != player.globalGain else { return }
+            player.globalGain = gain
         }
     }
     @Published var selectedMode: SomeSilenceSkippingMode = .none {
         didSet {
+            guard selectedMode != player.silenceHandlingType else { return }
             player.silenceHandlingType = selectedMode
         }
     }
@@ -244,7 +252,9 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         eventSubscription = nil
         oldPlayer.delegate = nil
 
-        resetPlaybackUI(clearSilenceMode: false)
+        // The new engine starts at defaults; its first delegate-set +
+        // subscribe() replays will push all current values back into the
+        // UI bindings, so the VM doesn't have to reset its own state.
         player = SomePlayer(policy)
         configurePlayer()
     }
@@ -290,26 +300,11 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
     }
 
     func reload() {
-        resetPlaybackUI(clearSilenceMode: true)
+        // Engine `reset()` puts every value back to its default; the
+        // delegate replays those defaults, which flows back into the
+        // @Published bindings. UI follows automatically — no manual
+        // resetPlaybackUI needed.
         player.reset()
-    }
-
-    private func resetPlaybackUI(clearSilenceMode: Bool) {
-        state = .initializing
-        timeline = Self.emptyTimeline
-        sliderValue = 0
-        isDraggingSlider = false
-        isSeeking = false
-        appliedRate = 1
-        savedSeconds = 0
-        errorMessage = nil
-        title = "Loading stream..."
-        artist = "Syntax"
-        album = ""
-        artwork = nil
-        if clearSilenceMode {
-            selectedMode = .none
-        }
     }
 
     private func applyTimeline() {
@@ -333,21 +328,53 @@ final class PlayerDemoViewModel: NSObject, ObservableObject {
         player.simulatedDownloadChunkDelayMilliseconds = UInt(simulatedDownloadDelayMs)
 
         // Subscribe to the full-rate event stream and hop to MainActor for
-        // SwiftUI-bound state. The throttled @MainActor delegate also fires
-        // for most of these; this stream is the right place to observe
-        // events without coalescing (here we only react to `rateChanged`).
+        // SwiftUI-bound state. The throttled @MainActor delegate covers the
+        // bulk of the playback events (state/time/duration/etc.); this
+        // stream covers the user-pref settings that aren't part of the
+        // delegate API, so the UI binds them back to engine state — for
+        // example, after `player.reset()`.
         eventSubscription?.cancel()
         let events = player.subscribe()
         eventSubscription = Task { [weak self] in
             for await event in events {
                 if Task.isCancelled { return }
-                if case .rateChanged(let rate) = event {
-                    await MainActor.run { self?.appliedRate = rate }
-                }
+                await MainActor.run { self?.applyEvent(event) }
             }
         }
 
         player.openRemote(streamURL)
+    }
+
+    /// Handle events coming off the engine's full-rate stream. Used for the
+    /// settings that the throttled delegate doesn't cover, plus the live
+    /// applied-rate signal. Updates @Published values via the setters that
+    /// guard against echo (see `baseRate.didSet` etc.).
+    private func applyEvent(_ event: PlayerEvent) {
+        switch event {
+        case .rateChanged(let value):
+            appliedRate = value
+        case .baseRateChanged(let value):
+            baseRate = value
+        case .pitchChanged(let value):
+            pitch = value
+        case .globalGainChanged(let value):
+            voiceBoost = value > 0
+        case .silenceHandlingTypeChanged(let mode):
+            selectedMode = mode
+        case .stateChanged(let newState):
+            // .initializing is the engine's "I just reset" signal. Clear
+            // the UI-only state (accumulator, error banner, drag flags)
+            // that nothing else can clear for us.
+            if newState == .initializing {
+                savedSeconds = 0
+                errorMessage = nil
+                isDraggingSlider = false
+                isSeeking = false
+                sliderValue = 0
+            }
+        default:
+            break
+        }
     }
 
     private func title(for policy: SomePlayerEngine.PlayerEngineDownloadingPolicy) -> String {

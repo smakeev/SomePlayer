@@ -194,6 +194,12 @@ open class Streamer: Streaming, @unchecked Sendable {
         reader = nil
         isFileSchedulingComplete = false
         didFireFileFinished = false
+        // A pending progressive seek (target + wait threshold) survives
+        // `stop()` because the downloader is its driver, not the player
+        // node. Without this, reset() while waiting on a future download
+        // chunk lands back on the prior wait sector after the new
+        // download's bytes flow in.
+        cancelProgressiveSeek()
 
         // Create a new parser
         do {

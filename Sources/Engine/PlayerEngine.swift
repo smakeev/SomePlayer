@@ -139,13 +139,14 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
         set {
             stateSnapshot.withLock { $0.volume = newValue }
+            emit(.volumeChanged(newValue))
             enqueue(.setVolume) { [weak self] in
                 self?.streamer.volume = newValue
             }
         }
     }
 
-    public enum SilenceHandlingType: Int {
+    public enum SilenceHandlingType: Int, Sendable {
         case none
         case smart
         case speedUp
@@ -155,6 +156,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     public var silenceHandlingType: SilenceHandlingType = .none {
         didSet {
             guard oldValue != silenceHandlingType else { return }
+            emit(.silenceHandlingTypeChanged(silenceHandlingType))
             let wasNone = (oldValue == .none)
             let base = self.baseRate
             let currentRate = self.rate
@@ -423,43 +425,130 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
     /// The delegate that receives throttled main-thread notifications.
     /// Writes propagate to the emitter so deliveries land on `@MainActor`.
+    /// Setting a non-nil delegate replays the current coalesced state via
+    /// the emitter so the new delegate is initialised without waiting for
+    /// the next change.
     weak public var delegate: SomeplayerEngineDelegate? = nil {
         didSet {
             delegateEmitter.delegate = delegate
+            if delegate != nil {
+                replayCurrentValuesToDelegate()
+            }
         }
     }
 
     // MARK: - Event subscribers
 
-    private var eventContinuations: [UUID: AsyncStream<PlayerEvent>.Continuation] = [:]
+    private let eventContinuations = OSAllocatedUnfairLock<[UUID: AsyncStream<PlayerEvent>.Continuation]>(initialState: [:])
 
-    /// Returns a fresh `AsyncStream` of every engine event. Each call yields an
-    /// independent stream — events emitted after subscription are delivered to the
-    /// caller; nothing is replayed. All active streams are `finish()`-ed when the
-    /// engine is deallocated.
+    /// Returns a fresh `AsyncStream` of every engine event. Each call yields
+    /// an independent stream. The current value of every coalesced event
+    /// (state, time, duration, title, etc.) is replayed once at the head of
+    /// the stream so subscribers get a coherent initial snapshot without
+    /// having to query getters. Edge events (errors, failures, seek-failed,
+    /// audio-tap buffers) are NOT replayed — those are history, not state.
+    /// All active streams are `finish()`-ed when the engine is deallocated.
     ///
-    /// Use this for full-rate observation (analytics, debug logging, custom UI
-    /// pipelines). For throttled `@MainActor` delivery, conform to
+    /// Use this for full-rate observation (analytics, debug logging, custom
+    /// UI pipelines). For throttled `@MainActor` delivery, conform to
     /// `SomeplayerEngineDelegate`.
     public func subscribe() -> AsyncStream<PlayerEvent> {
         let id = UUID()
         return AsyncStream { continuation in
-            self.eventContinuations[id] = continuation
+            // Hold the dict lock across snapshot capture + replay +
+            // registration. Any concurrent `emit(_:)` either runs
+            // before this (its events land outside our snapshot, and
+            // it won't see our continuation yet) or after (its events
+            // arrive on this continuation after the replay finishes).
+            // No event can interleave between "the snapshot we replay"
+            // and "the first emit this subscriber sees".
+            self.eventContinuations.withLock { dict in
+                for event in self.currentReplaySnapshot() {
+                    continuation.yield(event)
+                }
+                dict[id] = continuation
+            }
             continuation.onTermination = { [weak self] _ in
-                self?.eventContinuations[id] = nil
+                self?.eventContinuations.withLock { $0[id] = nil }
             }
         }
     }
 
     fileprivate func emit(_ event: PlayerEvent) {
-        for continuation in eventContinuations.values {
-            continuation.yield(event)
+        eventContinuations.withLock { dict in
+            for continuation in dict.values {
+                continuation.yield(event)
+            }
+        }
+    }
+
+    /// Builds the current-state replay sent to new `subscribe()` callers.
+    /// Only coalesced fields with a meaningful "current" value are
+    /// included; edge events (errors, etc.) are excluded.
+    private func currentReplaySnapshot() -> [PlayerEvent] {
+        var events: [PlayerEvent] = []
+        events.append(.stateChanged(state))
+        events.append(.currentTimeUpdated(currentTime))
+        events.append(.durationUpdated(duration))
+        events.append(.bufferingChanged(isBuffering))
+        events.append(.waitingForDownloaderChanged(isWaitingForDownloader))
+        events.append(.rateChanged(rate))
+        events.append(.baseRateChanged(baseRate))
+        events.append(.pitchChanged(pitch))
+        events.append(.volumeChanged(volume))
+        events.append(.globalGainChanged(globalGain))
+        events.append(.silenceHandlingTypeChanged(silenceHandlingType))
+        events.append(.isGoodForStreamChanged(isGoodForStream))
+        if offset != 0 {
+            events.append(.offsetChanged(offset))
+        }
+        if let title { events.append(.titleChanged(title)) }
+        if let artist { events.append(.artistChanged(artist)) }
+        if let album { events.append(.albumChanged(album)) }
+        if let image { events.append(.imageChanged(image)) }
+        if lastDownloadProgress > 0, let url = self.url {
+            events.append(.downloadProgressUpdated(
+                progress: lastDownloadProgress,
+                taskProgress: lastDownloadProgress,
+                url: url
+            ))
+        }
+        return events
+    }
+
+    /// Routes the current coalesced state through the throttled emitter
+    /// when a new delegate is assigned. The emitter's next tick will fire
+    /// each non-nil field once so the delegate is initialised without
+    /// waiting for the next change. Edge events are intentionally not
+    /// replayed.
+    private func replayCurrentValuesToDelegate() {
+        delegateEmitter.enqueueEdge(.stateChanged(state))
+        delegateEmitter.enqueueTime(currentTime)
+        delegateEmitter.enqueueDuration(duration)
+        delegateEmitter.enqueueBuffering(isBuffering)
+        delegateEmitter.enqueueWaitingForDownloader(isWaitingForDownloader)
+        if offset != 0 {
+            delegateEmitter.enqueueOffset(offset)
+        }
+        if let title { delegateEmitter.enqueueTitle(title) }
+        if let artist { delegateEmitter.enqueueArtist(artist) }
+        if let album { delegateEmitter.enqueueAlbum(album) }
+        if let image { delegateEmitter.enqueueImage(image) }
+        if lastDownloadProgress > 0, let url = self.url {
+            delegateEmitter.enqueueDownloadProgress(
+                progress: lastDownloadProgress,
+                taskProgress: lastDownloadProgress,
+                url: url
+            )
         }
     }
 
     deinit {
-        for continuation in eventContinuations.values {
-            continuation.finish()
+        eventContinuations.withLock { dict in
+            for continuation in dict.values {
+                continuation.finish()
+            }
+            dict.removeAll()
         }
     }
 
@@ -646,12 +735,20 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
     }
 
-    /// Resets playback state and reloads the current item without replacing the player instance.
+    /// Resets every piece of engine state to its defaults: playback state,
+    /// metadata, user-tunable settings (rate, pitch, volume, gain, silence
+    /// handling). Then reloads the current URL, if any.
+    ///
+    /// To preserve specific settings across a reset, snapshot them first and
+    /// re-apply after — the API stays free of opt-in flags. Future caching
+    /// work (when added) will be governed by its own explicit invalidation
+    /// surface; it will NOT be cleared by `reset()`.
     public func reset() {
         let currentURL = self.url
         let wasLocal = self.isLocal
         enqueueExclusive(.reset) { [weak self] in
             guard let self = self else { return }
+            self.resetUserSettingsToDefaults()
             guard let url = currentURL else {
                 self.resetPlaybackStateForOpening(isLocal: wasLocal, clearMetadata: true)
                 self.state = .undefined
@@ -665,6 +762,18 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
                 self?.url = url
             }
         }
+    }
+
+    /// Restores user-tunable settings to their factory defaults. Called
+    /// only from `reset()` — `openRemote` / `openLocal` deliberately keep
+    /// these intact so a track change doesn't blow away the user's
+    /// preferred rate/pitch/silence-mode.
+    private func resetUserSettingsToDefaults() {
+        silenceHandlingType = .none
+        baseRate = 1.0
+        pitch = 0
+        volume = 1.0
+        globalGain = 0
     }
 
     public func pause() {
@@ -808,6 +917,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
 
         set {
             stateSnapshot.withLock { $0.globalGain = newValue }
+            emit(.globalGainChanged(newValue))
             // globalGain implicitly resets silence handling and rate.
             let base = stateSnapshot.withLock { $0.baseRate ?? baseRate }
             stateSnapshot.withLock { $0.rate = base }
@@ -827,6 +937,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
         }
         set {
             stateSnapshot.withLock { $0.pitch = newValue }
+            emit(.pitchChanged(newValue))
             enqueue(.setPitch) { [weak self] in
                 self?.streamer.pitch = newValue
             }
@@ -836,6 +947,7 @@ open class SomePlayerEngine: NSObject, @unchecked Sendable {
     public var baseRate: Float = 1.0 {
         didSet {
             stateSnapshot.withLock { $0.baseRate = baseRate }
+            emit(.baseRateChanged(baseRate))
             self.rate = baseRate
         }
     }
