@@ -16,13 +16,6 @@ Tags: `[THREAD]` concurrency/race, `[BUG]` correctness, `[LIFETIME]` retain/leak
 
 ---
 
-## Downloader.swift / Downloader+URLSessionDelegate.swift
-
-### #20 [LIFETIME] `URLSession` retain cycle on every URL swap
-`Downloader.swift` — `URLSession(... delegate: self ...)` strong-references `Downloader`. The cycle is only broken in `didCompleteWithError` via `session.invalidateAndCancel()`. If the task is replaced (via `url=` didSet or `resume(...)`) before completion, the previous session leaks. Fix: invalidate the previous session before assigning a new one in every path that replaces `self.session`.
-
----
-
 ## PlayerEngine.swift
 
 ### #25 [THREAD] `state` didSet runs `streamer.totalDuration = 0` on the setting thread

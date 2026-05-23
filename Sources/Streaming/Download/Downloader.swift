@@ -126,6 +126,10 @@ public class Downloader: NSObject, Downloading, @unchecked Sendable {
         var headers = request.allHTTPHeaderFields ?? [:]
         headers["Range"] = "bytes=\(bytesHave)-"
         request.allHTTPHeaderFields = headers
+        // URLSession strongly references its delegate (self); without
+        // invalidating the previous session, the retain cycle leaks the
+        // downloader until didCompleteWithError eventually fires.
+        session?.invalidateAndCancel()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         task = session!.dataTask(with: request)
         start()
